@@ -1,10 +1,10 @@
 #include "subcommand.hpp"
-#include "gyeet.hpp"
+#include "odgi.hpp"
 #include "algorithms/kmer.hpp"
 #include "args.hxx"
 #include "threads.hpp"
 #include "algorithms/hash.hpp"
-#include "phf.hpp"
+#include "pmhf.hpp"
 #include "algorithms/prune.hpp"
 #include "algorithms/remove_high_degree.hpp"
 #include <chrono>
@@ -47,7 +47,7 @@ int main_kmers(int argc, char** argv) {
         return 1;
     }
 
-    graph_t graph;
+    odgi::graph_t graph;
     assert(argc > 0);
     assert(args::get(kmer_length));
     std::string infile = args::get(dg_in_file);

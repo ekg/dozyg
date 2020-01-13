@@ -160,6 +160,25 @@ ExternalProject_Add(picosha256
 ExternalProject_Get_property(picosha256 SOURCE_DIR)
 set(picosha256_INCLUDE "${SOURCE_DIR}")
 
+# mmmultimap (memory mapped multimap)
+ExternalProject_Add(mmmultimap
+  SOURCE_DIR "${CMAKE_SOURCE_DIR}/deps/mmmultimap"
+  BUILD_COMMAND ""
+  UPDATE_COMMAND ""
+  INSTALL_COMMAND "")
+ExternalProject_Get_property(mmmultimap SOURCE_DIR)
+set(mmmultimap_INCLUDE "${SOURCE_DIR}/src")
+
+# In-place Parallel Super Scalar Samplesort (IPS⁴o), header only
+ExternalProject_Add(ips4o
+  SOURCE_DIR "${CMAKE_SOURCE_DIR}/deps/ips4o"
+  INSTALL_COMMAND ""
+  BUILD_COMMAND ""
+  CONFIGURE_COMMAND "")
+ExternalProject_Get_property(ips4o SOURCE_DIR)
+set(ips4o_INCLUDE "${SOURCE_DIR}")
+
+
 # pybind11
 #ExternalProject_Add(pybind11
 #    GIT_REPOSITORY https://github.com/pybind/pybind11.git 
@@ -178,7 +197,10 @@ set(CMAKE_BUILD_TYPE Debug)
 # set up our target executable and specify its dependencies and includes
 add_library(gyeet_objs OBJECT
   ${CMAKE_SOURCE_DIR}/src/odgi.cpp
+  ${CMAKE_SOURCE_DIR}/src/node.cpp # for odgi
   ${CMAKE_SOURCE_DIR}/src/xg.cpp
+  ${CMAKE_SOURCE_DIR}/src/position.cpp
+  ${CMAKE_SOURCE_DIR}/src/threads.cpp
   ${CMAKE_SOURCE_DIR}/src/subcommand/subcommand.cpp
   ${CMAKE_SOURCE_DIR}/src/subcommand/kmers_main.cpp
   ${CMAKE_SOURCE_DIR}/src/algorithms/dfs.cpp
@@ -198,30 +220,36 @@ set(gyeet_DEPS
     bbhash
     ska
     structures
-    picosha256)
+    picosha256
+    mmmultimap
+    ips4o)
 add_dependencies(gyeet_objs ${gyeet_DEPS})
 
 set(gyeet_INCLUDES
-  "${CMAKE_SOURCE_DIR}/src"
-  "${CMAKE_SOURCE_DIR}/src/algorithms"
-  "${sdsl-lite_INCLUDE}"
-  "${sdsl-lite-divsufsort_INCLUDE}"
-  "${dynamic_INCLUDE}"
-  "${hopscotch_map_INCLUDE}"
-  "${gfakluge_INCLUDE}"
-  "${gfakluge_tinyFA_INCLUDE}"
-  "${handlegraph_INCLUDE}"
-  "${tayweeargs_INCLUDE}"
-  "${ska_INCLUDE}"
-  "${bbhash_INCLUDE}"
-  "${picosha256_INCLUDE}")
+  ${CMAKE_SOURCE_DIR}/src
+  ${CMAKE_SOURCE_DIR}/src/algorithms
+  ${sdsl-lite_INCLUDE}
+  ${sdsl-lite-divsufsort_INCLUDE}
+  ${dynamic_INCLUDE}
+  ${hopscotch_map_INCLUDE}
+  ${gfakluge_INCLUDE}
+  ${gfakluge_tinyFA_INCLUDE}
+  ${handlegraph_INCLUDE}
+  ${tayweeargs_INCLUDE}
+  ${ska_INCLUDE}
+  ${bbhash_INCLUDE}
+  ${picosha256_INCLUDE}
+  ${mmmultimap_INCLUDE}
+  ${ips4o_INCLUDE})
+  #${SOURCE_DIR}/src)
 
 set(gyeet_LIBS
-  "${sdsl-lite_LIB}/libsdsl.a"
-  "${sdsl-lite-divsufsort_LIB}/libdivsufsort.a"
-  "${sdsl-lite-divsufsort_LIB}/libdivsufsort64.a"
-  "${handlegraph_LIB}/libhandlegraph.a"
-  "-ldl")
+  ${sdsl-lite_LIB}/libsdsl.a
+  ${sdsl-lite-divsufsort_LIB}/libdivsufsort.a
+  ${sdsl-lite-divsufsort_LIB}/libdivsufsort64.a
+  ${handlegraph_LIB}/libhandlegraph.a
+  dl
+  atomic)
 
 #set(gyeet_HEADERS
 #  ${CMAKE_SOURCE_DIR}/src/xg.hpp

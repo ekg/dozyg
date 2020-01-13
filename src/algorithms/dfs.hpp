@@ -4,7 +4,7 @@
 #include <vector>
 #include <set>
 #include <deque>
-#include "hash_map.hpp"
+#include "flat_hash_map.hpp"
 
 namespace gyeet {
 namespace algorithms {

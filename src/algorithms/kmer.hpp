@@ -1,5 +1,4 @@
-#ifndef DSGVG_KMER_HPP_INCLUDED
-#define DSGVG_KMER_HPP_INCLUDED
+#pragma once
 
 #include <iostream>
 #include <string>
@@ -45,5 +44,3 @@ void for_each_kmer(const HandleGraph& graph, size_t k, size_t edge_max,
 }
 
 }
-
-#endif

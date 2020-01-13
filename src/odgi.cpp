@@ -31,6 +31,9 @@ uint64_t graph_t::get_node_rank(const nid_t& node_id) const {
 void graph_t::set_id_increment(const nid_t& min_id) {
     _id_increment = min_id;
 }
+
+void graph_t::reassign_node_ids(const std::function<nid_t(const nid_t&)>& get_new_id) {
+}
     
 /// Get the orientation of a handle
 bool graph_t::get_is_reverse(const handle_t& handle) const {
@@ -50,7 +53,7 @@ size_t graph_t::get_length(const handle_t& handle) const {
 /// Get the sequence of a node, presented in the handle's local forward orientation.
 std::string graph_t::get_sequence(const handle_t& handle) const {
     auto& seq = node_v.at(number_bool_packing::unpack_number(handle)).sequence();
-    return (get_is_reverse(handle) ? reverse_complement(seq) : seq);
+    return (get_is_reverse(handle) ? dna::reverse_complement(seq) : seq);
 }
 
 /// Loop over all the handles to next/previous (right/left) nodes. Passes

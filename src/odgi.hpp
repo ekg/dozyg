@@ -24,14 +24,27 @@
 #include <handlegraph/deletable_handle_graph.hpp>
 #include <handlegraph/mutable_path_deletable_handle_graph.hpp>
 #include "dynamic.hpp"
-#include "dynamic_types.hpp"
 #include "dna.hpp"
-#include "hash_map.hpp"
 #include "node.hpp"
+#include "flat_hash_map.hpp"
 
 namespace odgi {
 
 using namespace handlegraph;
+
+// dynamic typedefs
+typedef dyn::succinct_bitvector<dyn::spsi<dyn::packed_vector,256,16> > suc_bv;
+typedef dyn::lciv<dyn::packed_vector,512,1> lciv_iv;
+typedef dyn::wt_string<dyn::succinct_bitvector<dyn::spsi<dyn::packed_vector,256,16> > > wt_str;
+typedef dyn::hacked_vector suc_iv;
+
+// a new hash map type
+template<typename K, typename V>
+class hash_map : public ska::flat_hash_map<K, V, ska::power_of_two_std_hash<K> > { };
+template<typename K, typename V>
+class string_hash_map : public ska::flat_hash_map<K, V, ska::power_of_two_std_hash<K> > { };
+template<typename K>
+class hash_set : public ska::flat_hash_set<K, ska::power_of_two_std_hash<K> > { };
 
 // Resolve ambiguous nid_t typedef by putting it in our namespace.
 using nid_t = handlegraph::nid_t;
@@ -98,6 +111,9 @@ public:
     /// Set a minimum id to increment the id space by, used as a hint during construction.
     /// May have no effect on a backing implementation.
     void set_id_increment(const nid_t& min_id);
+
+    // TODO implement
+    void reassign_node_ids(const std::function<nid_t(const nid_t&)>& get_new_id);
     
     /// Get a handle from a Visit Protobuf object.
     /// Must be using'd to avoid shadowing.
