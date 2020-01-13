@@ -4,13 +4,21 @@ namespace gyeet {
 
 namespace algorithms {
 
-void for_each_kmer(const HandleGraph& graph, size_t k, size_t edge_max,
+void for_each_kmer(const HandleGraph& graph, size_t k, size_t edge_max, size_t degree_max,
                    const std::function<void(const kmer_t&)>& lambda) {
-    graph.for_each_handle([&](const handle_t& h) {
+    graph.for_each_handle(
+        [&](const handle_t& h) {
             // for the forward and reverse of this handle
             // walk k bases from the end, so that any kmer starting on the node will be represented in the tree we build
             for (auto handle_is_rev : { false, true }) {
                 handle_t handle = handle_is_rev ? graph.flip(h) : h;
+                if (degree_max) {
+                    size_t curr_count = 0;
+                    graph.follow_edges(handle, false, [&](const handle_t& next) { ++curr_count; });
+                    if (curr_count > degree_max) {
+                        continue; // skip this orientation
+                    }
+                }
                 std::list<kmer_t> kmers;
                 // for each position in the node, set up a kmer with that start position and the node end or kmer length as the end position
                 // determine next positions
@@ -23,10 +31,11 @@ void for_each_kmer(const HandleGraph& graph, size_t k, size_t edge_max,
                     kmer_t kmer = kmer_t(handle_seq.substr(offset(begin), offset(end)-offset(begin)), begin, end, handle);
                     if (kmer.seq.size() < k) {
                         size_t next_count = 0;
-                        if (edge_max) graph.follow_edges(kmer.curr, false, [&](const handle_t& next) { ++next_count; return next_count <= 1; });
+                        if (edge_max) graph.follow_edges(kmer.curr, false, [&](const handle_t& next) { ++next_count; });
                         //kmer.seq.reserve(k); // may reduce allocation costs
                         // follow edges if we haven't completed the kmer here
                         if (next_count > 1 && edge_max == kmer.forks) {
+                        } else if (degree_max && next_count > degree_max) {
                         } else {
                             graph.follow_edges(kmer.curr, false, [&](const handle_t& next) {
                                     kmers.push_back(kmer);
@@ -68,10 +77,11 @@ void for_each_kmer(const HandleGraph& graph, size_t k, size_t edge_max,
                             kmer.seq.append(curr_seq.substr(0,take));
                             if (kmer.seq.size() < k) {
                                 size_t next_count = 0;
-                                if (edge_max) graph.follow_edges(kmer.curr, false, [&](const handle_t& next) { ++next_count; return next_count <= 1; });
+                                if (edge_max) graph.follow_edges(kmer.curr, false, [&](const handle_t& next) { ++next_count; });
                                 //kmer.seq.reserve(k); // may reduce allocation costs
                                 // follow edges if we haven't completed the kmer here
                                 if (next_count > 1 && edge_max == kmer.forks) {
+                                } else if (degree_max && next_count > degree_max) {
                                 } else {
                                     graph.follow_edges(kmer.curr, false, [&](const handle_t& next) {
                                             kmers.push_back(kmer);

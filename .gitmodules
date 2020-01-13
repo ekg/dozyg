@@ -34,3 +34,6 @@
 [submodule "deps/mmmultimap"]
 	path = deps/mmmultimap
 	url = https://github.com/ekg/mmmultimap.git
+[submodule "deps/gzip_reader"]
+	path = deps/gzip_reader
+	url = https://github.com/gatoravi/gzip_reader.git

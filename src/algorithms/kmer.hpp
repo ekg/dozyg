@@ -38,7 +38,7 @@ std::ostream& operator<<(std::ostream& out, const kmer_t& kmer);
 namespace algorithms {
 
 /// Iterate over all the kmers in the graph, running lambda on each
-void for_each_kmer(const HandleGraph& graph, size_t k, size_t edge_max,
+void for_each_kmer(const HandleGraph& graph, size_t k, size_t edge_max, size_t degree_max,
                    const std::function<void(const kmer_t&)>& lambda);
 
 }

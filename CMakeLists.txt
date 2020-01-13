@@ -178,18 +178,13 @@ ExternalProject_Add(ips4o
 ExternalProject_Get_property(ips4o SOURCE_DIR)
 set(ips4o_INCLUDE "${SOURCE_DIR}")
 
-
-# pybind11
-#ExternalProject_Add(pybind11
-#    GIT_REPOSITORY https://github.com/pybind/pybind11.git 
-#    GIT_TAG v2.2.4
-#    CONFIGURE_COMMAND ""
-#    BUILD_COMMAND ""
-#    INSTALL_COMMAND "")
-#ExternalProject_Get_Property(pybind11 SOURCE_DIR)
-#set(pybind11_INCLUDE_DIRS ${SOURCE_DIR}/include)
-#set(pybind11_DIR ${SOURCE_DIR})
-#add_subdirectory(${pybind11_DIR})
+# gzip file reader, header only
+ExternalProject_Add(gzipreader
+  SOURCE_DIR "${CMAKE_SOURCE_DIR}/deps/gzip_reader"
+  UPDATE_COMMAND ""
+  INSTALL_COMMAND "")
+ExternalProject_Get_property(gzipreader SOURCE_DIR)
+set(gzipreader_INCLUDE "${SOURCE_DIR}")
 
 #set(CMAKE_BUILD_TYPE Release)
 set(CMAKE_BUILD_TYPE Debug)
@@ -221,6 +216,7 @@ set(gyeet_DEPS
     ska
     structures
     picosha256
+    gzipreader
     mmmultimap
     ips4o)
 add_dependencies(gyeet_objs ${gyeet_DEPS})
@@ -239,9 +235,9 @@ set(gyeet_INCLUDES
   ${ska_INCLUDE}
   ${bbhash_INCLUDE}
   ${picosha256_INCLUDE}
+  ${gzipreader_INCLUDE}
   ${mmmultimap_INCLUDE}
   ${ips4o_INCLUDE})
-  #${SOURCE_DIR}/src)
 
 set(gyeet_LIBS
   ${sdsl-lite_LIB}/libsdsl.a
