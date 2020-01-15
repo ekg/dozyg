@@ -198,38 +198,40 @@ int main_index(int argc, char** argv) {
         // now we can iterate through our keys/values in order, storing them somewhere
         std::string kmer_pos_vec_idx = args::get(work_prefix) + ".kmer_pos_vec";
         ofstream kmer_pos_vec_f(kmer_pos_vec_idx.c_str());
+        std::string kmer_pos_ptr_idx = args::get(work_prefix) + ".kmer_pos_ptr";
+        ofstream kmer_pos_ptr_f(kmer_pos_ptr_idx.c_str());
 
         struct kmer_start_end_t {
             int64_t begin;
             int64_t end;
         };
 
-        sdsl::bit_vector kmer_bv(n_kmers+1);
         uint64_t last_hash = std::numeric_limits<uint64_t>::max();
         uint64_t marker_idx = 0;
         for (uint64_t i = 0; i < n_kmers; ++i) {
             auto& kp = kmer_pos[i];
             if (kp.hash != last_hash) {
-                kmer_bv[marker_idx] = 1;
+                kmer_pos_ptr_f.write((char*)&marker_idx, sizeof(uint64_t));
             }
             kmer_start_end_t p = { kp.begin, kp.end };
             kmer_pos_vec_f.write((char*)&p, sizeof(kmer_start_end_t));
             ++marker_idx;
         }
-        kmer_bv[marker_idx] = 1; // last marker
         kmer_pos_vec_f.close();
-
-        sdsl::bit_vector::select_1_type kmer_bv_select;
-        sdsl::util::assign(kmer_bv_select, sdsl::bit_vector::select_1_type(&kmer_bv));
+        // write the total in the last entry
+        kmer_pos_ptr_f.write((char*)&marker_idx, sizeof(uint64_t));
+        kmer_pos_ptr_f.close();
 
         mmappable_vector<kmer_start_end_t, mmap_allocator<kmer_start_end_t>> kmer_pos_vec;
         kmer_pos_vec.mmap_file(kmer_pos_vec_idx.c_str(), READ_WRITE_SHARED, 0, n_kmers);
+        mmappable_vector<uint64_t, mmap_allocator<uint64_t>> kmer_pos_ptr;
+        kmer_pos_ptr.mmap_file(kmer_pos_ptr_idx.c_str(), READ_WRITE_SHARED, 0, kmer_set.size()+1);
 
         //std::cerr << "querying kmers" << std::endl;
         chrono::high_resolution_clock::time_point t1 = chrono::high_resolution_clock::now();
         for (auto& hash : kmer_set) {
-            uint64_t k = bphf->lookup(hash)+1;
-            uint64_t c = kmer_bv_select(k+1) - kmer_bv_select(k);
+            uint64_t k = bphf->lookup(hash);
+            uint64_t c = kmer_pos_ptr[k+1] - kmer_pos_ptr[k];
         }
         chrono::high_resolution_clock::time_point t2 = chrono::high_resolution_clock::now();
         auto used_time = chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
