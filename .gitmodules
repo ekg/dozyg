@@ -37,3 +37,6 @@
 [submodule "deps/gzip_reader"]
 	path = deps/gzip_reader
 	url = https://github.com/gatoravi/gzip_reader.git
+[submodule "deps/mmap_allocator"]
+	path = deps/mmap_allocator
+	url = https://github.com/ekg/mmap_allocator.git

@@ -169,6 +169,15 @@ ExternalProject_Add(mmmultimap
 ExternalProject_Get_property(mmmultimap SOURCE_DIR)
 set(mmmultimap_INCLUDE "${SOURCE_DIR}/src")
 
+# mmap allocator
+ExternalProject_Add(mmap_allocator
+  SOURCE_DIR "${CMAKE_SOURCE_DIR}/deps/mmap_allocator"
+  CMAKE_ARGS "${CMAKE_ARGS};-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>"
+  UPDATE_COMMAND "")
+ExternalProject_Get_property(mmap_allocator INSTALL_DIR)
+set(mmap_allocator_INCLUDE "${INSTALL_DIR}/include/mmap_allocator")
+set(mmap_allocator_LIB "${INSTALL_DIR}/lib")
+
 # In-place Parallel Super Scalar Samplesort (IPS⁴o), header only
 ExternalProject_Add(ips4o
   SOURCE_DIR "${CMAKE_SOURCE_DIR}/deps/ips4o"
@@ -196,8 +205,9 @@ add_library(gyeet_objs OBJECT
   ${CMAKE_SOURCE_DIR}/src/xg.cpp
   ${CMAKE_SOURCE_DIR}/src/position.cpp
   ${CMAKE_SOURCE_DIR}/src/threads.cpp
+  ${CMAKE_SOURCE_DIR}/src/utility.cpp
   ${CMAKE_SOURCE_DIR}/src/subcommand/subcommand.cpp
-  ${CMAKE_SOURCE_DIR}/src/subcommand/kmers_main.cpp
+  ${CMAKE_SOURCE_DIR}/src/subcommand/index_main.cpp
   ${CMAKE_SOURCE_DIR}/src/algorithms/dfs.cpp
   ${CMAKE_SOURCE_DIR}/src/algorithms/kmer.cpp
   ${CMAKE_SOURCE_DIR}/src/algorithms/hash.cpp
@@ -218,6 +228,7 @@ set(gyeet_DEPS
     picosha256
     gzipreader
     mmmultimap
+    mmap_allocator
     ips4o)
 add_dependencies(gyeet_objs ${gyeet_DEPS})
 
@@ -237,13 +248,16 @@ set(gyeet_INCLUDES
   ${picosha256_INCLUDE}
   ${gzipreader_INCLUDE}
   ${mmmultimap_INCLUDE}
+  ${mmap_allocator_INCLUDE}
   ${ips4o_INCLUDE})
+  
 
 set(gyeet_LIBS
   ${sdsl-lite_LIB}/libsdsl.a
   ${sdsl-lite-divsufsort_LIB}/libdivsufsort.a
   ${sdsl-lite-divsufsort_LIB}/libdivsufsort64.a
   ${handlegraph_LIB}/libhandlegraph.a
+  ${mmap_allocator_LIB}/libmmap_allocator.a
   dl
   atomic)
 

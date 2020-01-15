@@ -1,4 +1,5 @@
 #include "subcommand.hpp"
+#include <chrono>
 #include "odgi.hpp"
 #include "xg.hpp"
 #include "algorithms/kmer.hpp"
@@ -6,23 +7,27 @@
 #include "threads.hpp"
 #include "algorithms/hash.hpp"
 #include "pmhf.hpp"
-#include <chrono>
+#include "mmmultiset.hpp"
+#include "mmap_allocator.h"
+#include "mmap_exception.h"
+#include "mmappable_vector.h"
+#include "utility.hpp"
 
 namespace gyeet {
 
 using namespace gyeet::subcommand;
 
-int main_kmers(int argc, char** argv) {
+int main_index(int argc, char** argv) {
 
     // trick argumentparser to do the right thing with the subcommand
     for (uint64_t i = 1; i < argc-1; ++i) {
         argv[i] = argv[i+1];
     }
-    std::string prog_name = "gyeet kmers";
+    std::string prog_name = "gyeet index";
     argv[0] = (char*)prog_name.c_str();
     --argc;
     
-    args::ArgumentParser parser("show and characterize the kmer space of the graph");
+    args::ArgumentParser parser("build a bbhash based kmer index of the graph");
     args::HelpFlag help(parser, "help", "display this help summary", {'h', "help"});
     args::ValueFlag<std::string> graph_in_file(parser, "FILE", "load the graph from this file", {'i', "idx"});
     args::ValueFlag<std::string> idx_out_file(parser, "FILE", "save our kmer index to this file", {'o', "out"});
@@ -30,6 +35,7 @@ int main_kmers(int argc, char** argv) {
     args::ValueFlag<uint64_t> max_furcations(parser, "N", "break at edges that would be induce this many furcations in a kmer", {'e', "max-furcations"});
     args::ValueFlag<uint64_t> max_degree(parser, "N", "remove nodes that have degree greater that this level", {'D', "max-degree"});
     args::ValueFlag<uint64_t> threads(parser, "N", "number of threads to use", {'t', "threads"});
+    args::ValueFlag<std::string> work_prefix(parser, "FILE", "write temporary files with this prefix", {'w', "work-prefix"});
     args::Flag kmers_stdout(parser, "", "write the kmers to stdout", {'c', "stdout"});
 
     try {
@@ -88,45 +94,57 @@ int main_kmers(int argc, char** argv) {
         }
         std::cout.flush();
     } else {
+        std::string kmer_set_idx = args::get(work_prefix) + ".kmer_set";
+        mmmulti::set<uint64_t> kmer_set(kmer_set_idx);
         //ska::flat_hash_map<uint32_t, uint32_t> kmer_table;
-        std::vector<uint64_t> kmers;
+        //std::vector<uint64_t> kmers;
         uint64_t seen_kmers = 0;
         algorithms::for_each_kmer(graph, args::get(kmer_length), args::get(max_furcations), args::get(max_degree), [&](const kmer_t& kmer) {
-                //int tid = omp_get_thread_num();
-//#pragma omp atomic
                 uint64_t hash = djb2_hash64(kmer.seq.c_str());
                 //if (hash % 31 == 0) {
-#pragma omp critical (kmers)
-                kmers.push_back(hash);
+//#pragma omp critical (kmers)
+                kmer_set.append(hash);
                 //}
-                /*
-#pragma omp critical (cerr)
-                if (seen_kmers % 100000 == 0) {
-                    std::cerr << seen_kmers << " " << kmer_table.size() << "\r";
-                } else {
-                    ++seen_kmers;
-                }
-                */
             });
         //std::cerr << std::endl;
         //ips4o::sort(kmers.begin(), kmers.end());
-        std::sort(kmers.begin(), kmers.end());
-        kmers.erase(std::unique(kmers.begin(), kmers.end()), kmers.end());
+
+        std::string kmer_vec_idx = args::get(work_prefix) + ".kmer_vec";
+        uint64_t n_kmers = 0;
+        kmer_set.index();
+        kmer_set.for_each_unique_value(
+            [&](const uint64_t& k) {
+                ++n_kmers;
+            });
+        //nodes_.mmap_file(filename.c_str(), READ_WRITE_SHARED, 0, record_count())
+        mmap_allocator_namespace::mmappable_vector<uint64_t> kmers_vec; //, mmap_allocator<uint64_t>>
+        allocate_file(kmer_vec_idx, n_kmers * sizeof(uint64_t));
+        kmers_vec.mmap_file(kmer_vec_idx.c_str(), mmap_allocator_namespace::READ_WRITE_SHARED, 0, n_kmers);
+        //kmers_vec.
+        uint64_t i = 0;
+        kmer_set.for_each_unique_value(
+            [&](const uint64_t& k) {
+                kmers_vec[i++] = k;
+            });
+        //std::remove(kmer_set_idx.c_str());
+        //std::sort(kmers.begin(), kmers.end());
+        //kmers.erase(std::unique(kmers.begin(), kmers.end()), kmers.end());
         double gammaFactor = 4.0;
-        boophf_t* bphf = new boomphf::mphf<uint64_t,hasher_t>(kmers.size(),
-                                                              kmers,
+        boophf_t* bphf = new boomphf::mphf<uint64_t,hasher_t>(kmers_vec.size(),
+                                                              kmers_vec,
                                                               get_thread_count(),
                                                               gammaFactor,
                                                               false,false);
+
         //kmers.clear();
         //std::cerr << "querying kmers" << std::endl;
         chrono::high_resolution_clock::time_point t1 = chrono::high_resolution_clock::now();
-        for (auto& hash : kmers) {
+        for (auto& hash : kmers_vec) {
             bphf->lookup(hash);
         }
         chrono::high_resolution_clock::time_point t2 = chrono::high_resolution_clock::now();
         auto used_time = chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-        std::cerr << "done with " << kmers.size() << " @ " << (double)used_time/(double)kmers.size() << "ns/kmer" << std::endl;
+        std::cerr << "done with " << kmers_vec.size() << " @ " << (double)used_time/(double)kmers_vec.size() << "ns/kmer" << std::endl;
         /*
         algorithms::for_each_kmer(graph, args::get(kmer_length), [&](const kmer_t& kmer) {
                 uint64_t hash = djb2_hash64(kmer.seq.c_str());
@@ -145,8 +163,8 @@ int main_kmers(int argc, char** argv) {
     return 0;
 }
 
-static Subcommand gyeet_kmers("kmers", "process and dump the kmers of the graph",
-                              PIPELINE, 3, main_kmers);
+static Subcommand gyeet_index("index", "process and dump the kmers of the graph",
+                              PIPELINE, 3, main_index);
 
 
 }
