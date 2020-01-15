@@ -7,8 +7,6 @@
 #include "threads.hpp"
 #include "algorithms/hash.hpp"
 #include "pmhf.hpp"
-#include "mmmultiset.hpp"
-#include "mmmultimap.hpp"
 #include "mmap_allocator.h"
 #include "mmap_exception.h"
 #include "mmappable_vector.h"
@@ -18,6 +16,7 @@
 namespace gyeet {
 
 using namespace gyeet::subcommand;
+using namespace mmap_allocator_namespace;
 
 int main_index(int argc, char** argv) {
 
@@ -98,50 +97,7 @@ int main_index(int argc, char** argv) {
         }
         std::cout.flush();
     } else {
-        std::string kmer_set_idx = args::get(work_prefix) + ".kmer_set";
-        mmmulti::set<uint64_t> kmer_set(kmer_set_idx);
-        //ska::flat_hash_map<uint32_t, uint32_t> kmer_table;
-        //std::vector<uint64_t> kmers;
-        uint64_t seen_kmers = 0;
-        algorithms::for_each_kmer(
-            graph, args::get(kmer_length), args::get(max_furcations), args::get(max_degree),
-            [&](const kmer_t& kmer) {
-                uint64_t hash = djb2_hash64(kmer.seq.c_str());
-                kmer_set.append(hash);
-            });
-        //std::cerr << std::endl;
-        //ips4o::sort(kmers.begin(), kmers.end());
 
-        std::string kmer_vec_idx = args::get(work_prefix) + ".kmer_vec";
-        uint64_t n_kmers = 0;
-        kmer_set.index();
-        kmer_set.for_each_unique_value(
-            [&](const uint64_t& k) {
-                ++n_kmers;
-            });
-        //nodes_.mmap_file(filename.c_str(), READ_WRITE_SHARED, 0, record_count())
-        mmap_allocator_namespace::mmappable_vector<uint64_t> kmers_vec; //, mmap_allocator<uint64_t>>
-        allocate_file(kmer_vec_idx, n_kmers * sizeof(uint64_t));
-        kmers_vec.mmap_file(kmer_vec_idx.c_str(), mmap_allocator_namespace::READ_WRITE_SHARED, 0, n_kmers);
-        //kmers_vec.
-        uint64_t i = 0;
-        kmer_set.for_each_unique_value(
-            [&](const uint64_t& k) {
-                kmers_vec[i++] = k;
-            });
-        //std::remove(kmer_set_idx.c_str());
-        //std::sort(kmers.begin(), kmers.end());
-        //kmers.erase(std::unique(kmers.begin(), kmers.end()), kmers.end());
-        double gammaFactor = 4.0;
-        boophf_t* bphf = new boomphf::mphf<uint64_t,hasher_t>(kmers_vec.size(),
-                                                              kmers_vec,
-                                                              get_thread_count(),
-                                                              gammaFactor,
-                                                              false,false);
-
-        //kmers.clear();
-
-        // build our sequence space index
         uint64_t total_seq_length = 0;
         graph.for_each_handle(
             [&](const handle_t& h) {
@@ -159,22 +115,23 @@ int main_index(int argc, char** argv) {
 
         // the way we store kmers in our index
         struct kmer_pos_t {
-            uint64_t kmer_hash;
+            uint64_t hash;
             int64_t begin;
             int64_t end;
         };
 
         // map from kmer hash idx to kmer start/end in graph sequence vector
-        //mmmulti::map<uint64_t, std::pair<int64_t, int64_t>> kmer_map(kmer_map_idx);
         std::string kmer_pos_idx = args::get(work_prefix) + ".kmer_pos";
         ofstream kmer_pos_f(kmer_pos_idx.c_str());
-        uint64_t n_positions = 0;
+
+        std::string kmer_set_idx = args::get(work_prefix) + ".kmer_set";
+        ofstream kmer_set_f(kmer_set_idx.c_str());
+        
+        uint64_t n_kmers = 0;
         algorithms::for_each_kmer(
             graph, args::get(kmer_length), args::get(max_furcations), args::get(max_degree),
             [&](const kmer_t& kmer) {
                 uint64_t hash = djb2_hash64(kmer.seq.c_str());
-                //kmer_set.append(hash);
-                uint64_t bbidx = bphf->lookup(hash);
                 auto& b = kmer.begin;
                 int64_t start_pos = seq_bv_rank(id(b)) + (is_rev(b) ? graph.get_length(graph.get_handle(id(b))) - offset(b) : offset(b));
                 if (is_rev(b)) start_pos = -start_pos;
@@ -182,47 +139,101 @@ int main_index(int argc, char** argv) {
                 int64_t end_pos = seq_bv_rank(id(e)) + (is_rev(e) ? graph.get_length(graph.get_handle(id(e))) - offset(e) : offset(e));
                 if (is_rev(e)) end_pos = -end_pos;
                 auto v = std::make_pair(start_pos, end_pos);
-                kmer_pos_t p = { bbidx, start_pos, end_pos };
+                kmer_pos_t p = { hash, start_pos, end_pos };
                 //kmer_map.add(bbidx, std::make_pair(start_pos, end_pos));
 #pragma omp critical (kmer_pos_write)
                 {
-                    ++n_positions;
+                    ++n_kmers;
                     kmer_pos_f.write((char*)&p, sizeof(kmer_pos_t));
                 }
+#pragma omp critical (kmer_set_write)
+                {
+                    kmer_set_f.write((char*)&hash, sizeof(uint64_t));
+                }
             });
-
         kmer_pos_f.close();
-        mmap_allocator_namespace::mmappable_vector<kmer_pos_t> kmers_pos; //, mmap_allocator<uint64_t>>;
-        kmers_pos.mmap_file(kmer_pos_idx.c_str(), mmap_allocator_namespace::READ_WRITE_SHARED, 0, n_positions);
+        kmer_set_f.close();
+        
+        //ska::flat_hash_map<uint32_t, uint32_t> kmer_table;
+        //std::vector<uint64_t> kmers;
+
+        //std::cerr << std::endl;
+        mmappable_vector<uint64_t, mmap_allocator<uint64_t>> kmer_set;
+        kmer_set.mmap_file(kmer_set_idx.c_str(), READ_WRITE_SHARED, 0, n_kmers);
+        ips4o::parallel::sort(kmer_set.begin(), kmer_set.end());
+        std::cerr << "total kmers " << kmer_set.size() << std::endl;
+        kmer_set.erase(std::unique(kmer_set.begin(), kmer_set.end()), kmer_set.end());
+        std::cerr << "unique kmers " << kmer_set.size() << std::endl;
+
+        double gammaFactor = 8.0;
+        boophf_t* bphf = new boomphf::mphf<uint64_t,hasher_t>(kmer_set.size(),
+                                                              kmer_set,
+                                                              get_thread_count(),
+                                                              gammaFactor,
+                                                              false,false);
+
+        //kmers.clear();
+        // rename our kmers
+
+        // build our sequence space index
+
+        mmappable_vector<kmer_pos_t, mmap_allocator<kmer_pos_t>> kmer_pos; //, mmap_allocator<uint64_t>>;
+        kmer_pos.mmap_file(kmer_pos_idx.c_str(), READ_WRITE_SHARED, 0, n_kmers);
+        // set our kmer hashes
+#pragma omp parallel for
+        for (uint64_t i = 0; i < n_kmers; ++i) {
+            auto& kp = kmer_pos[i];
+            kp.hash = bphf->lookup(kp.hash);
+        }
+
         ips4o::parallel::sort(
-            kmers_pos.begin(), kmers_pos.end(),
+            kmer_pos.begin(), kmer_pos.end(),
             [](const kmer_pos_t& a, const kmer_pos_t& b) {
-                return a.kmer_hash < b.kmer_hash
-                                     || a.kmer_hash == b.kmer_hash
-                                     && (a.begin < b.begin
-                                         || a.begin == b.begin && a.end < b.end);
+                return a.hash < b.hash
+                                || a.hash == b.hash
+                                && (a.begin < b.begin
+                                    || a.begin == b.begin && a.end < b.end);
             });
 
         // now we can iterate through our keys/values in order, storing them somewhere
-        /*
-        for (auto& p : kmers_pos) {
-            std::cerr << p.kmer_hash << " " << p.begin << " " << p.end << std::endl;
+        std::string kmer_pos_vec_idx = args::get(work_prefix) + ".kmer_pos_vec";
+        ofstream kmer_pos_vec_f(kmer_pos_vec_idx.c_str());
+
+        struct kmer_start_end_t {
+            int64_t begin;
+            int64_t end;
+        };
+
+        sdsl::bit_vector kmer_bv(n_kmers+1);
+        uint64_t last_hash = std::numeric_limits<uint64_t>::max();
+        uint64_t marker_idx = 0;
+        for (uint64_t i = 0; i < n_kmers; ++i) {
+            auto& kp = kmer_pos[i];
+            if (kp.hash != last_hash) {
+                kmer_bv[marker_idx] = 1;
+            }
+            kmer_start_end_t p = { kp.begin, kp.end };
+            kmer_pos_vec_f.write((char*)&p, sizeof(kmer_start_end_t));
+            ++marker_idx;
         }
-        */
-        /*
-        //std::string kmer_pos_idx = args::get(work_prefix) + ".kmer_pos";
-        //allocate_file(kmer_pos_idx, n_kmers * sizeof(uint64_t));
-        */
-        // TODO here we gotta build our postion index
+        kmer_bv[marker_idx] = 1; // last marker
+        kmer_pos_vec_f.close();
+
+        sdsl::bit_vector::select_1_type kmer_bv_select;
+        sdsl::util::assign(kmer_bv_select, sdsl::bit_vector::select_1_type(&kmer_bv));
+
+        mmappable_vector<kmer_start_end_t, mmap_allocator<kmer_start_end_t>> kmer_pos_vec;
+        kmer_pos_vec.mmap_file(kmer_pos_vec_idx.c_str(), READ_WRITE_SHARED, 0, n_kmers);
 
         //std::cerr << "querying kmers" << std::endl;
         chrono::high_resolution_clock::time_point t1 = chrono::high_resolution_clock::now();
-        for (auto& hash : kmers_vec) {
-            bphf->lookup(hash);
+        for (auto& hash : kmer_set) {
+            uint64_t k = bphf->lookup(hash)+1;
+            uint64_t c = kmer_bv_select(k+1) - kmer_bv_select(k);
         }
         chrono::high_resolution_clock::time_point t2 = chrono::high_resolution_clock::now();
         auto used_time = chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-        std::cerr << "done with " << kmers_vec.size() << " @ " << (double)used_time/(double)kmers_vec.size() << "ns/kmer" << std::endl;
+        std::cerr << "done with " << kmer_set.size() << " @ " << (double)used_time/(double)kmer_set.size() << "ns/kmer" << std::endl;
         
         /*
         algorithms::for_each_kmer(graph, args::get(kmer_length), [&](const kmer_t& kmer) {
