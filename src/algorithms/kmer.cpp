@@ -31,7 +31,7 @@ void for_each_kmer(const HandleGraph& graph, size_t k, size_t edge_max, size_t d
                     kmer_t kmer = kmer_t(handle_seq.substr(offset(begin), offset(end)-offset(begin)), begin, end, handle);
                     if (kmer.seq.size() < k) {
                         size_t next_count = 0;
-                        if (edge_max) graph.follow_edges(kmer.curr, false, [&](const handle_t& next) { ++next_count; });
+                        if (edge_max || degree_max) graph.follow_edges(kmer.curr, false, [&](const handle_t& next) { ++next_count; });
                         //kmer.seq.reserve(k); // may reduce allocation costs
                         // follow edges if we haven't completed the kmer here
                         if (next_count > 1 && edge_max == kmer.forks) {
@@ -77,7 +77,7 @@ void for_each_kmer(const HandleGraph& graph, size_t k, size_t edge_max, size_t d
                             kmer.seq.append(curr_seq.substr(0,take));
                             if (kmer.seq.size() < k) {
                                 size_t next_count = 0;
-                                if (edge_max) graph.follow_edges(kmer.curr, false, [&](const handle_t& next) { ++next_count; });
+                                if (edge_max || degree_max) graph.follow_edges(kmer.curr, false, [&](const handle_t& next) { ++next_count; });
                                 //kmer.seq.reserve(k); // may reduce allocation costs
                                 // follow edges if we haven't completed the kmer here
                                 if (next_count > 1 && edge_max == kmer.forks) {

@@ -21,7 +21,7 @@ struct kmer_t {
            const pos_t& b,
            const pos_t& e,
            const handle_t& c)
-        : seq(s), begin(b), end(e), curr(c) { };
+        : seq(s), begin(b), end(e), curr(c), forks(0) { };
     /// the kmer
     std::string seq;
     /// our start position
