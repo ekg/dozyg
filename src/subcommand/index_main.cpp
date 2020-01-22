@@ -23,12 +23,12 @@ int main_index(int argc, char** argv) {
     args::ArgumentParser parser("build a bbhash based kmer index of the graph");
     args::HelpFlag help(parser, "help", "display this help summary", {'h', "help"});
     args::ValueFlag<std::string> graph_in_file(parser, "FILE", "load the graph from this file", {'i', "idx"});
-    args::ValueFlag<std::string> idx_out_file(parser, "FILE", "save our kmer index to this file", {'o', "out"});
+    args::ValueFlag<std::string> idx_out_file(parser, "FILE", "save our index with this prefix (defaults to input file name and path)", {'o', "out"});
     args::ValueFlag<uint64_t> kmer_length(parser, "K", "the length of the kmers to generate", {'k', "kmer-length"});
     args::ValueFlag<uint64_t> max_furcations(parser, "N", "break at edges that would be induce this many furcations in a kmer", {'e', "max-furcations"});
     args::ValueFlag<uint64_t> max_degree(parser, "N", "remove nodes that have degree greater that this level", {'D', "max-degree"});
     args::ValueFlag<uint64_t> threads(parser, "N", "number of threads to use", {'t', "threads"});
-    args::ValueFlag<std::string> work_prefix(parser, "FILE", "write temporary files with this prefix", {'w', "work-prefix"});
+    //args::ValueFlag<std::string> work_prefix(parser, "FILE", "write temporary files with this prefix", {'w', "work-prefix"});
     //args::Flag kmers_stdout(parser, "", "write the kmers to stdout", {'c', "stdout"});
 
     try {
@@ -64,13 +64,24 @@ int main_index(int argc, char** argv) {
         omp_set_num_threads(args::get(threads));
     }
 
+    std::string idx_prefix;
+    if (args::get(idx_out_file).empty()) {
+        if (infile == "-") {
+            std::cerr << "[gyeet index] Error: reading graph from stdin but no output file specified with -o" << std::endl;
+            return 4;
+        } else {
+            idx_prefix = infile;
+        }
+    } else {
+        idx_prefix = args::get(idx_out_file);
+    }
+
     gyeet_index_t index;
     index.build(graph,
                 args::get(kmer_length),
                 args::get(max_furcations),
                 args::get(max_degree),
-                args::get(work_prefix));
-    index.save(args::get(idx_out_file));
+                idx_prefix);
 
     return 0;
 }

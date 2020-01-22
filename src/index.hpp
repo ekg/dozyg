@@ -41,9 +41,8 @@ public:
                const uint64_t& kmer_length,
                const uint64_t& max_furcations,
                const uint64_t& max_degree,
-               const std::string& work_prefix);
-    void save(const std::string& outfile);
-    void load(const std::string& outfile);
+               const std::string& out_prefix);
+    void load(const std::string& in_prefix);
     void for_values_of(const std::string& seq, const std::function<void(const kmer_start_end_t& v)>& lambda);
     //(kmer_start_end_t*&
     //void for_each_match(

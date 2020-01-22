@@ -6,7 +6,7 @@ void gyeet_index_t::build(const HandleGraph& graph,
                           const uint64_t& kmer_length,
                           const uint64_t& max_furcations,
                           const uint64_t& max_degree,
-                          const std::string& work_prefix) {
+                          const std::string& out_prefix) {
 
     uint64_t total_seq_length = 0;
     graph.for_each_handle(
@@ -24,10 +24,10 @@ void gyeet_index_t::build(const HandleGraph& graph,
     sdsl::util::assign(seq_bv_rank, sdsl::bit_vector::rank_1_type(&seq_bv));
 
     // map from kmer hash idx to kmer start/end in graph sequence vector
-    std::string kmer_pos_idx = work_prefix + ".kmer_pos";
+    std::string kmer_pos_idx = out_prefix + ".kpos";
     std::ofstream kmer_pos_f(kmer_pos_idx.c_str());
 
-    std::string kmer_set_idx = work_prefix + ".kmer_set";
+    std::string kmer_set_idx = out_prefix + ".kset";
     std::ofstream kmer_set_f(kmer_set_idx.c_str());
         
     uint64_t n_kmers = 0;
@@ -76,9 +76,11 @@ void gyeet_index_t::build(const HandleGraph& graph,
                                                 gammaFactor,
                                                 false,false);
 
-    //kmers.clear();
-    // rename our kmers
+    // remove the kmer set working file
+    kmer_set.munmap_file();
+    std::remove(kmer_set_idx.c_str());
 
+    // rename our kmers
     // build our sequence space index
     mmappable_vector<kmer_pos_t> kmer_pos;
     kmer_pos.mmap_file(kmer_pos_idx.c_str(), READ_WRITE_SHARED, 0, n_kmers);
@@ -99,9 +101,9 @@ void gyeet_index_t::build(const HandleGraph& graph,
         });
 
     // now we can iterate through our keys/values in order, storing them somewhere
-    std::string kmer_pos_vec_idx = work_prefix + ".kmer_pos_vec";
+    std::string kmer_pos_vec_idx = out_prefix + ".kpv";
     std::ofstream kmer_pos_vec_f(kmer_pos_vec_idx.c_str());
-    std::string kmer_pos_ptr_idx = work_prefix + ".kmer_pos_ptr";
+    std::string kmer_pos_ptr_idx = out_prefix + ".kpp";
     std::ofstream kmer_pos_ptr_f(kmer_pos_ptr_idx.c_str());
 
     uint64_t last_hash = std::numeric_limits<uint64_t>::max();
@@ -120,6 +122,10 @@ void gyeet_index_t::build(const HandleGraph& graph,
     kmer_pos_ptr_f.write((char*)&marker_idx, sizeof(uint64_t));
     kmer_pos_ptr_f.close();
 
+    // remove the temporary file of kmer positions
+    kmer_pos.munmap_file();
+    std::remove(kmer_pos_idx.c_str());
+
     kmer_pos_vec.mmap_file(kmer_pos_vec_idx.c_str(), READ_WRITE_SHARED, 0, n_kmers);
     kmer_pos_ptr.mmap_file(kmer_pos_ptr_idx.c_str(), READ_WRITE_SHARED, 0, kmer_set.size()+1);
 
@@ -132,7 +138,12 @@ void gyeet_index_t::build(const HandleGraph& graph,
     std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
     auto used_time = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     std::cerr << "done with " << kmer_set.size() << " @ " << (double)used_time/(double)kmer_set.size() << "ns/kmer" << std::endl;
-        
+
+    std::string bbx_out_idx = out_prefix + ".bbx";
+    std::ofstream f(bbx_out_idx.c_str());
+    bphf->save(f);
+    f.close();
+    
     /*
       algorithms::for_each_kmer(graph, args::get(kmer_length), [&](const kmer_t& kmer) {
       uint64_t hash = djb2_hash64(kmer.seq.c_str());
@@ -143,12 +154,6 @@ void gyeet_index_t::build(const HandleGraph& graph,
       std::cerr << "done with " << seen_kmers << " kmers" << std::endl;
     */
 
-}
-
-void gyeet_index_t::save(const std::string& outfile) {
-    //std::string bphf_out = outfile + ".bbh";
-    std::ofstream f(outfile.c_str());
-    bphf->save(f);
 }
 
 void gyeet_index_t::load(const std::string& outfile) {
