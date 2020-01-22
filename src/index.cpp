@@ -63,6 +63,7 @@ void gyeet_index_t::build(const HandleGraph& graph,
     //std::cerr << std::endl;
     mmappable_vector<uint64_t, mmap_allocator<uint64_t>> kmer_set;
     kmer_set.mmap_file(kmer_set_idx.c_str(), READ_WRITE_SHARED, 0, n_kmers);
+    //mmap_buffer_t kmer_set_buf = open_mmap_buffer(kmer_set_idx.c_str());
     ips4o::parallel::sort(kmer_set.begin(), kmer_set.end());
     std::cerr << "total kmers " << kmer_set.size() << std::endl;
     kmer_set.erase(std::unique(kmer_set.begin(), kmer_set.end()), kmer_set.end());
