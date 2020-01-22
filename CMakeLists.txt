@@ -203,6 +203,7 @@ add_library(gyeet_objs OBJECT
   ${CMAKE_SOURCE_DIR}/src/odgi.cpp
   ${CMAKE_SOURCE_DIR}/src/node.cpp # for odgi
   ${CMAKE_SOURCE_DIR}/src/xg.cpp
+  ${CMAKE_SOURCE_DIR}/src/index.cpp
   ${CMAKE_SOURCE_DIR}/src/position.cpp
   ${CMAKE_SOURCE_DIR}/src/threads.cpp
   ${CMAKE_SOURCE_DIR}/src/utility.cpp

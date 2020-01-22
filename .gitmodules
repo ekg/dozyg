@@ -40,3 +40,6 @@
 [submodule "deps/mmap_allocator"]
 	path = deps/mmap_allocator
 	url = https://github.com/ekg/mmap_allocator.git
+[submodule "deps/edlib"]
+	path = deps/edlib
+	url = https://github.com/Martinsos/edlib.git
