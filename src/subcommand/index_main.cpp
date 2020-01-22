@@ -46,8 +46,8 @@ int main_index(int argc, char** argv) {
         return 1;
     }
 
-    odgi::graph_t graph;
-    //xg::XG graph;
+    //odgi::graph_t graph;
+    xg::XG graph;
     assert(argc > 0);
     assert(args::get(kmer_length));
     std::string infile = args::get(graph_in_file);
