@@ -31,8 +31,8 @@ struct kmer_start_end_t {
 class gyeet_index_t {
 public:
     boophf_t* bphf;
-    mmappable_vector<uint64_t, mmap_allocator<uint64_t>> kmer_pos_ptr;
-    mmappable_vector<kmer_start_end_t, mmap_allocator<kmer_start_end_t>> kmer_pos_vec;
+    mmappable_vector<uint64_t> kmer_pos_ptr;
+    mmappable_vector<kmer_start_end_t> kmer_pos_vec;
     gyeet_index_t(void) { }
     ~gyeet_index_t(void) {
         delete bphf;

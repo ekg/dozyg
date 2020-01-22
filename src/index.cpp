@@ -61,7 +61,7 @@ void gyeet_index_t::build(const HandleGraph& graph,
     //std::vector<uint64_t> kmers;
 
     //std::cerr << std::endl;
-    mmappable_vector<uint64_t, mmap_allocator<uint64_t>> kmer_set;
+    mmappable_vector<uint64_t> kmer_set;
     kmer_set.mmap_file(kmer_set_idx.c_str(), READ_WRITE_SHARED, 0, n_kmers);
     //mmap_buffer_t kmer_set_buf = open_mmap_buffer(kmer_set_idx.c_str());
     ips4o::parallel::sort(kmer_set.begin(), kmer_set.end());
@@ -80,7 +80,7 @@ void gyeet_index_t::build(const HandleGraph& graph,
     // rename our kmers
 
     // build our sequence space index
-    mmappable_vector<kmer_pos_t, mmap_allocator<kmer_pos_t>> kmer_pos;
+    mmappable_vector<kmer_pos_t> kmer_pos;
     kmer_pos.mmap_file(kmer_pos_idx.c_str(), READ_WRITE_SHARED, 0, n_kmers);
     // set our kmer hashes
 #pragma omp parallel for
