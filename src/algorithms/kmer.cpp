@@ -22,13 +22,12 @@ void for_each_kmer(const HandleGraph& graph, size_t k, size_t edge_max, size_t d
                 std::list<kmer_t> kmers;
                 // for each position in the node, set up a kmer with that start position and the node end or kmer length as the end position
                 // determine next positions
-                nid_t handle_id = graph.get_id(handle);
                 size_t handle_length = graph.get_length(handle);
                 std::string handle_seq = graph.get_sequence(handle);
                 for (size_t i = 0; i < handle_length;  ++i) {
-                    pos_t begin = make_pos_t(handle_id, handle_is_rev, i);
-                    pos_t end = make_pos_t(handle_id, handle_is_rev, std::min(handle_length, i+k));
-                    kmer_t kmer = kmer_t(handle_seq.substr(offset(begin), offset(end)-offset(begin)), begin, end, handle);
+                    handle_pos_t begin = handle_pos_t(handle, i);
+                    handle_pos_t end = handle_pos_t(handle, std::min(handle_length, i+k));
+                    kmer_t kmer = kmer_t(handle_seq.substr(begin.pos, end.pos-begin.pos), begin, end, handle);
                     if (kmer.seq.size() < k) {
                         size_t next_count = 0;
                         if (edge_max || degree_max) graph.follow_edges(kmer.curr, false, [&](const handle_t& next) { ++next_count; });
@@ -61,19 +60,16 @@ void for_each_kmer(const HandleGraph& graph, size_t k, size_t edge_max, size_t d
                         if (kmer.seq.size() == k) {
                             // TODO here check if we are at the beginning of the reverse head or the beginning of the forward tail and would need special handling
                             // establish the context
-                            handle_t end_handle = graph.get_handle(id(kmer.end), is_rev(kmer.end));
-                            size_t end_length = graph.get_length(end_handle);
+                            size_t end_length = graph.get_length(kmer.end.handle);
                             // now pass the kmer to our callback
                             lambda(kmer);
                             q = kmers.erase(q);
                         } else {
                             // do we finish in the current node?
-                            nid_t curr_id = graph.get_id(kmer.curr);
-                            size_t curr_length = graph.get_length(kmer.curr);
-                            bool curr_is_rev = graph.get_is_reverse(kmer.curr);
                             std::string curr_seq = graph.get_sequence(kmer.curr);
+                            size_t curr_length = curr_seq.size();
                             size_t take = std::min(curr_length, k-kmer.seq.size());
-                            kmer.end = make_pos_t(curr_id, curr_is_rev, take);
+                            kmer.end = handle_pos_t(kmer.curr, take);
                             kmer.seq.append(curr_seq.substr(0,take));
                             if (kmer.seq.size() < k) {
                                 size_t next_count = 0;
@@ -115,10 +111,12 @@ void for_each_kmer(const HandleGraph& graph, size_t k, size_t edge_max, size_t d
 
 }
 
+/*
 std::ostream& operator<<(std::ostream& out, const kmer_t& kmer) {
     out << kmer.seq << "\t"
         << id(kmer.begin) << ":" << (is_rev(kmer.begin) ? "-":"") << offset(kmer.begin) << "\t";
     return out;
 }
+*/
 
 }

@@ -63,6 +63,18 @@ inline void reverse_complement_in_place(std::string& seq) {
     }
 }
 
+inline void reverse_complement_in_place(char* seq, size_t len) {
+    size_t swap_size = len / 2;
+    for (size_t i = 0, j = len - 1; i < swap_size; i++, j--) {
+        char tmp = seq[i];
+        seq[i] = complement[seq[j]];
+        seq[j] = complement[tmp];
+    }
+    if (len % 2) {
+        seq[swap_size] = complement[seq[swap_size]];
+    }
+}
+
 inline int dna_as_int(char c) {
     switch (c) {
     case 'A':
