@@ -20,7 +20,7 @@ int main_index(int argc, char** argv) {
     argv[0] = (char*)prog_name.c_str();
     --argc;
     
-    args::ArgumentParser parser("build a bbhash based kmer index of the graph");
+    args::ArgumentParser parser("build a pmhf-based kmer positional index of the graph");
     args::HelpFlag help(parser, "help", "display this help summary", {'h', "help"});
     args::ValueFlag<std::string> graph_in_file(parser, "FILE", "load the graph from this file", {'i', "idx"});
     args::ValueFlag<std::string> idx_out_file(parser, "FILE", "save our index with this prefix (defaults to input file name and path)", {'o', "out"});
@@ -46,8 +46,8 @@ int main_index(int argc, char** argv) {
         return 1;
     }
 
-    //odgi::graph_t graph;
-    xg::XG graph;
+    odgi::graph_t graph;
+    //xg::XG graph;
     assert(argc > 0);
     assert(args::get(kmer_length));
     std::string infile = args::get(graph_in_file);

@@ -209,6 +209,7 @@ add_library(gyeet_objs OBJECT
   ${CMAKE_SOURCE_DIR}/src/utility.cpp
   ${CMAKE_SOURCE_DIR}/src/subcommand/subcommand.cpp
   ${CMAKE_SOURCE_DIR}/src/subcommand/index_main.cpp
+  ${CMAKE_SOURCE_DIR}/src/subcommand/query_main.cpp
   ${CMAKE_SOURCE_DIR}/src/algorithms/dfs.cpp
   ${CMAKE_SOURCE_DIR}/src/algorithms/kmer.cpp
   ${CMAKE_SOURCE_DIR}/src/algorithms/hash.cpp
