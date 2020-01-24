@@ -6,7 +6,9 @@ std::vector<chain_t>
 chains(std::vector<anchor_t>& anchors,
        const uint64_t& seed_length,
        const uint64_t& max_gap,
-       const uint64_t bandwidth) {
+       const uint64_t bandwidth,
+       const double secondary_chain_threshold,
+       const double max_mapq) {
     // sort the anchors by their ending position in the target
     std::sort(anchors.begin(), anchors.end(),
               [](const anchor_t& a,
@@ -20,18 +22,92 @@ chains(std::vector<anchor_t>& anchors,
         anchor_i.max_chain_score = seed_length;
         uint64_t min_j = bandwidth > i ? 0 : i - bandwidth;
         for (int64_t j = i; j >= min_j; --j) {
-            const anchor_t& anchor_j = anchors[j];
-            anchor_i.max_chain_score
-                = std::max(
-                    anchor_i.max_chain_score,
-                    score_anchors(anchor_j,
-                                  anchor_i,
-                                  seed_length,
-                                  max_gap));
+            anchor_t& anchor_j = anchors[j];
+            double proposed_score = score_anchors(anchor_j,
+                                                  anchor_i,
+                                                  seed_length,
+                                                  max_gap);
+            if (proposed_score > seed_length
+                && proposed_score > anchor_i.max_chain_score) {
+                anchor_i.max_chain_score = proposed_score;
+                anchor_i.best_predecessor = &anchor_j;
+            }
         }
     }
     // collect chains
     std::vector<chain_t> chains;
+    uint64_t i = anchors.size()-1;
+    while (i >= 0) {
+        anchor_t* a = &anchors[i];
+        if (a->best_predecessor != nullptr
+            && a->max_chain_score > seed_length) { //!curr_chain) {
+            chains.emplace_back();
+            auto& curr_chain = chains.back();
+            curr_chain.score = a->max_chain_score;
+            do {
+                curr_chain.anchors.push_back(a);
+                anchor_t* b = a->best_predecessor;
+                a->best_predecessor = nullptr; // mark done
+                a = b; // swap
+            } while (a->best_predecessor != nullptr);
+            // investigate if a deque would be faster
+            std::reverse(curr_chain.anchors.begin(),
+                         curr_chain.anchors.end());
+        }
+        --i;
+    }
+    // sort the chains by score, descending
+    std::sort(chains.begin(), chains.end(),
+              [](const chain_t& a,
+                 const chain_t& b) {
+                  return a.score > b.score;
+              });
+    // find the primary chains by examining their overlaps in the query
+    IITree<seq_pos_t, chain_t*> tree;
+    for (auto& chain : chains) {
+        const seq_pos_t& query_begin = chain.anchors.front()->query_begin;
+        const seq_pos_t& query_end = chain.anchors.back()->query_end;
+        tree.add(query_begin, query_end, &chain);
+    }
+    tree.index();
+    for (auto& chain : chains) {
+        if (!chain.processed()) {
+            const seq_pos_t& chain_begin = chain.anchors.front()->query_begin;
+            const seq_pos_t& chain_end = chain.anchors.back()->query_end;
+            uint64_t chain_length = chain_end - chain_begin;
+            chain_t* best_secondary = nullptr;
+            std::vector<size_t> ovlp;
+            tree.overlap(chain_begin, chain_end, ovlp);
+            for (auto& idx : ovlp) {
+                chain_t* other_chain = tree.data(idx);
+                if (!other_chain->processed()) { // not sure we need this check, based on definitions and order of evaluation
+                    const seq_pos_t& other_begin = tree.start(idx);
+                    const seq_pos_t& other_end = tree.end(idx);
+                    uint64_t other_length = other_end - other_begin;
+                    seq_pos_t ovlp_begin = std::max(chain_begin, other_begin);
+                    seq_pos_t ovlp_end = std::min(chain_begin, other_begin);
+                    uint64_t ovlp_length = ovlp_end - ovlp_begin;
+                    if ((double)other_length < (double)ovlp_length * secondary_chain_threshold) {
+                        // this chain is secondary
+                        other_chain->mapping_quality = 0;
+                        other_chain->is_secondary = true;
+                        if (best_secondary->score < other_chain->score
+                            || best_secondary == nullptr) {
+                            best_secondary = other_chain;
+                        }
+                    }
+                }
+            }
+            if (best_secondary == nullptr) {
+                chain.mapping_quality = max_mapq;
+            } else {
+                chain.mapping_quality =
+                    40 * (1 - best_secondary->score / chain.score)
+                    * std::min(1.0, (double)chain.anchors.size()/10.0)
+                    * log(chain.score);
+            }
+        }
+    }
     return chains;
 }
 

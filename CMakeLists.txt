@@ -195,6 +195,16 @@ ExternalProject_Add(gzipreader
 ExternalProject_Get_property(gzipreader SOURCE_DIR)
 set(gzipreader_INCLUDE "${SOURCE_DIR}")
 
+# gzip file reader, header only
+ExternalProject_Add(cgranges
+  SOURCE_DIR "${CMAKE_SOURCE_DIR}/deps/cgranges"
+  UPDATE_COMMAND ""
+  INSTALL_COMMAND ""
+  BUILD_COMMAND ""
+  CONFIGURE_COMMAND "")
+ExternalProject_Get_property(cgranges SOURCE_DIR)
+set(cgranges_INCLUDE "${SOURCE_DIR}/cpp")
+
 #set(CMAKE_BUILD_TYPE Release)
 set(CMAKE_BUILD_TYPE Debug)
 
@@ -230,7 +240,8 @@ set(gyeet_DEPS
     gzipreader
     mmmultimap
     mmap_allocator
-    ips4o)
+    ips4o
+    cgranges)
 add_dependencies(gyeet_objs ${gyeet_DEPS})
 
 set(gyeet_INCLUDES
@@ -250,7 +261,8 @@ set(gyeet_INCLUDES
   ${gzipreader_INCLUDE}
   ${mmmultimap_INCLUDE}
   ${mmap_allocator_INCLUDE}
-  ${ips4o_INCLUDE})
+  ${ips4o_INCLUDE}
+  ${cgranges_INCLUDE})
   
 
 set(gyeet_LIBS

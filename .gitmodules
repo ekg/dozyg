@@ -43,3 +43,6 @@
 [submodule "deps/edlib"]
 	path = deps/edlib
 	url = https://github.com/Martinsos/edlib.git
+[submodule "deps/cgranges"]
+	path = deps/cgranges
+	url = https://github.com/lh3/cgranges.git
