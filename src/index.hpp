@@ -79,6 +79,8 @@ struct node_ref_t {
 
 class gyeet_index_t {
 public:
+    // the kmer sizes that this graph was built on
+    std::vector<uint64_t> kmer_sizes;
     // total sequence length of the graph
     uint64_t seq_length = 0;
     // forward sequence of the graph, stored here for fast access during alignment
@@ -107,27 +109,30 @@ public:
     mmappable_vector<uint64_t> kmer_pos_ref;
     // our kmer positions
     mmappable_vector<kmer_start_end_t> kmer_pos_table;
-    gyeet_index_t(void) { }
-    ~gyeet_index_t(void) {
-        delete bphf;
-    }
+    // if we're loaded, helps during teardown
+    bool loaded = false;
+
+    // constructor/destructor
+    gyeet_index_t(void);
+    ~gyeet_index_t(void);
+
+    // build from an input graph
     void build(const HandleGraph& graph,
                const uint64_t& kmer_length,
                const uint64_t& max_furcations,
                const uint64_t& max_degree,
                const std::string& out_prefix);
-    //void index_graph(const HandleGraph& graph);
+
+    // load an existing index
     void load(const std::string& in_prefix);
+
+    // access: iterate over values for a given sequence
     void for_values_of(const std::string& seq, const std::function<void(const kmer_start_end_t& v)>& lambda);
+
+    // graph accessors
     size_t get_length(const handle_t& h);
     bool is_reverse(const handle_t& h);
-    seq_pos_t get_seq_pos(const handle_t& h); //, const uint64_t& offset);
-    //uint64_t offset_in_fwd(const handle_t& h, const uint64_t& offset);
-    //uint64_t offset_in_rev(const handle_t& h, const uint64_t& offset);
-    // todo -- approximate graph alignment / GAF format
-    //std::vector<handle_t> graph_alignment(...)
-    // todo -- graph aware alignment scoring
-    //uint64_t score_alignment(...)
+    seq_pos_t get_seq_pos(const handle_t& h);
 };
 
 }

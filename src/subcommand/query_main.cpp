@@ -85,22 +85,23 @@ int main_query(int argc, char** argv) {
         args::get(max_furcations),
         args::get(max_degree),
         [&](const kmer_t& kmer) {
-            //uint64_t hash = djb2_hash64(kmer.seq.c_str());
-            std::cerr << "kmer " << kmer.seq << std::endl;
-            seq_pos_t begin_pos = index.get_seq_pos(kmer.begin.handle) + kmer.begin.pos;
-            seq_pos_t end_pos = index.get_seq_pos(kmer.end.handle) + kmer.end.pos;
-            std::cerr << "begin/end " << seq_pos::to_string(begin_pos) << " " << seq_pos::to_string(end_pos) << std::endl;
-            // check if we can find it in the index
-            bool found = false;
-            index.for_values_of(
-                kmer.seq,
-                [&](const kmer_start_end_t& p) {
-                    std::cerr << "--> begin/end " << seq_pos::to_string(p.begin) << " " << seq_pos::to_string(p.end) << std::endl;
-                    if (p.begin == begin_pos && p.end == end_pos) {
-                        found = true;
-                    }
-                });
-            assert(found);
+            if (kmer.seq.find('N') == std::string::npos) {
+                //std::cerr << "kmer " << kmer.seq << std::endl;
+                seq_pos_t begin_pos = index.get_seq_pos(kmer.begin.handle) + kmer.begin.pos;
+                seq_pos_t end_pos = index.get_seq_pos(kmer.end.handle) + kmer.end.pos;
+                //std::cerr << "begin/end " << seq_pos::to_string(begin_pos) << " " << seq_pos::to_string(end_pos) << std::endl;
+                // check if we can find it in the index
+                bool found = false;
+                index.for_values_of(
+                    kmer.seq,
+                    [&](const kmer_start_end_t& p) {
+                        //std::cerr << "--> begin/end " << seq_pos::to_string(p.begin) << " " << seq_pos::to_string(p.end) << std::endl;
+                        if (p.begin == begin_pos && p.end == end_pos) {
+                            found = true;
+                        }
+                    });
+                assert(found);
+            }
         });
 
     return 0;

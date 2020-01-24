@@ -2,6 +2,20 @@
 
 namespace gyeet {
 
+gyeet_index_t::gyeet_index_t(void) { }
+
+gyeet_index_t::~gyeet_index_t(void) {
+    if (loaded) {
+        delete bphf;
+        seq_fwd.munmap_file();
+        seq_rev.munmap_file();
+        edges.munmap_file();
+        node_ref.munmap_file();
+        kmer_pos_ref.munmap_file();
+        kmer_pos_table.munmap_file();
+    }
+}
+
 void gyeet_index_t::build(const HandleGraph& graph,
                           const uint64_t& kmer_length,
                           const uint64_t& max_furcations,
@@ -22,13 +36,13 @@ void gyeet_index_t::build(const HandleGraph& graph,
 
     // follow forward and reverse edges
     std::string seq_fwd_filename = out_prefix + ".sqf";
-    std::ofstream seq_fwd_f(seq_fwd_filename.c_str());
+    std::ofstream seq_fwd_f(seq_fwd_filename.c_str(), std::ios::binary | std::ios::trunc);
     std::string seq_rev_filename = out_prefix + ".sqr";
-    std::ofstream seq_rev_f(seq_rev_filename.c_str());
+    std::ofstream seq_rev_f(seq_rev_filename.c_str(), std::ios::binary | std::ios::trunc);
     std::string edge_filename = out_prefix + ".gye";
-    std::ofstream edge_f(edge_filename.c_str());
+    std::ofstream edge_f(edge_filename.c_str(), std::ios::binary | std::ios::trunc);
     std::string node_ref_filename = out_prefix + ".gyn";
-    std::ofstream node_ref_f(node_ref_filename.c_str());
+    std::ofstream node_ref_f(node_ref_filename.c_str(), std::ios::binary | std::ios::trunc);
     uint64_t seq_idx = 0;
     uint64_t ref_idx = 0;
     graph.for_each_handle(
@@ -41,15 +55,15 @@ void gyeet_index_t::build(const HandleGraph& graph,
             graph.follow_edges(
                 h, true,
                 [&](const handle_t& p) {
-                    edge_f.write((char*)&p, sizeof(p));
+                    edge_f.write(reinterpret_cast<char const*>(&p), sizeof(p));
                     ++ref.count_prev;
                 });
             n_edges += ref.count_prev;
-            node_ref_f.write((char*)&ref, sizeof(ref));
+            node_ref_f.write(reinterpret_cast<char const*>(&ref), sizeof(ref));
             graph.follow_edges(
                 h, false,
                 [&](const handle_t& n) {
-                    edge_f.write((char*)&n, sizeof(n));
+                    edge_f.write(reinterpret_cast<char const*>(&n), sizeof(n));
                     ++n_edges;
                 });
             seq_idx += seq.length();
@@ -57,13 +71,13 @@ void gyeet_index_t::build(const HandleGraph& graph,
     {
         // write a marker reference, to simplify counting of edges
         node_ref_t ref = { seq_idx, ref_idx, 0 };
-        node_ref_f.write((char*)&ref, sizeof(ref));
+        node_ref_f.write(reinterpret_cast<char const*>(&ref), sizeof(ref));
     }
 
     // save our rank structure and bitvector
     sdsl::util::assign(seq_bv_rank, sdsl::bit_vector::rank_1_type(&seq_bv));
     std::string seq_bv_filename = out_prefix + ".sbv";
-    std::ofstream seq_bv_f(seq_bv_filename.c_str());
+    std::ofstream seq_bv_f(seq_bv_filename.c_str(), std::ios::binary | std::ios::trunc);
     seq_bv.serialize(seq_bv_f);
     seq_bv_rank.serialize(seq_bv_f);
     seq_bv_f.close();
@@ -79,7 +93,7 @@ void gyeet_index_t::build(const HandleGraph& graph,
     seq_rev.mmap_file(seq_rev_filename.c_str(), READ_WRITE_SHARED, 0, seq_length);
 
     // and reverse complement the revcomp one
-    dna::reverse_complement_in_place((char*)&*seq_rev.begin(), seq_length);
+    dna::reverse_complement_in_place(reinterpret_cast<char*>(&*seq_rev.begin()), seq_length);
 
     // open the graph vectors
     edges.mmap_file(edge_filename.c_str(), READ_WRITE_SHARED, 0, n_edges);
@@ -87,25 +101,27 @@ void gyeet_index_t::build(const HandleGraph& graph,
 
     // map from kmer hash idx to kmer start/end in graph sequence vector
     std::string kmer_pos_filename = out_prefix + ".kpos";
-    std::ofstream kmer_pos_f(kmer_pos_filename.c_str());
+    std::ofstream kmer_pos_f(kmer_pos_filename.c_str(), std::ios::binary | std::ios::trunc);
     std::string kmer_set_filename = out_prefix + ".kset";
-    std::ofstream kmer_set_f(kmer_set_filename.c_str());
+    std::ofstream kmer_set_f(kmer_set_filename.c_str(), std::ios::binary | std::ios::trunc);
         
     algorithms::for_each_kmer(
         graph, kmer_length, max_furcations, max_degree,
         [&](const kmer_t& kmer) {
-            uint64_t hash = djb2_hash64(kmer.seq.c_str());
-            seq_pos_t begin_pos = get_seq_pos(kmer.begin.handle) + kmer.begin.pos;
-            seq_pos_t end_pos = get_seq_pos(kmer.end.handle) + kmer.end.pos;
-            kmer_pos_t p = { hash, begin_pos, end_pos };
+            if (kmer.seq.find('N') == std::string::npos) {
+                uint64_t hash = djb2_hash64(kmer.seq.c_str());
+                seq_pos_t begin_pos = get_seq_pos(kmer.begin.handle) + kmer.begin.pos;
+                seq_pos_t end_pos = get_seq_pos(kmer.end.handle) + kmer.end.pos;
+                kmer_pos_t p = { hash, begin_pos, end_pos };
 #pragma omp critical (kmer_pos_write)
-            {
-                ++n_kmer_positions;
-                kmer_pos_f.write((char*)&p, sizeof(kmer_pos_t));
-            }
+                {
+                    ++n_kmer_positions;
+                    kmer_pos_f.write(reinterpret_cast<char*>(&p), sizeof(kmer_pos_t));
+                }
 #pragma omp critical (kmer_set_write)
-            {
-                kmer_set_f.write((char*)&hash, sizeof(uint64_t));
+                {
+                    kmer_set_f.write(reinterpret_cast<char*>(&hash), sizeof(uint64_t));
+                }
             }
         });
     kmer_pos_f.close();
@@ -152,25 +168,27 @@ void gyeet_index_t::build(const HandleGraph& graph,
 
     // now we can iterate through our keys/values in order, storing them somewhere
     std::string kmer_pos_table_filename = out_prefix + ".kpv";
-    std::ofstream kmer_pos_table_f(kmer_pos_table_filename.c_str());
+    std::ofstream kmer_pos_table_f(kmer_pos_table_filename.c_str(), std::ios::binary | std::ios::trunc);
     std::string kmer_pos_ref_filename = out_prefix + ".kpp";
-    std::ofstream kmer_pos_ref_f(kmer_pos_ref_filename.c_str());
+    std::ofstream kmer_pos_ref_f(kmer_pos_ref_filename.c_str(), std::ios::binary | std::ios::trunc);
 
     uint64_t last_hash = std::numeric_limits<uint64_t>::max();
     uint64_t marker_idx = 0;
     for (uint64_t i = 0; i < n_kmer_positions; ++i) {
         auto& kp = kmer_pos[i];
+        //std::cerr << "kmer_pos " << i << " hash is " << kp.hash << std::endl;
         if (kp.hash != last_hash) {
             //std::cerr << "kmer_pos_ref_f " << marker_idx << " " << kp.hash << std::endl;
-            kmer_pos_ref_f.write((char*)&marker_idx, sizeof(uint64_t));
+            kmer_pos_ref_f.write(reinterpret_cast<char*>(&marker_idx), sizeof(uint64_t));
+            last_hash = kp.hash;
         }
         kmer_start_end_t p = { kp.begin, kp.end };
-        kmer_pos_table_f.write((char*)&p, sizeof(kmer_start_end_t));
+        kmer_pos_table_f.write(reinterpret_cast<char*>(&p), sizeof(kmer_start_end_t));
         ++marker_idx;
     }
     kmer_pos_table_f.close();
     // write the total in the last entry
-    kmer_pos_ref_f.write((char*)&marker_idx, sizeof(uint64_t));
+    kmer_pos_ref_f.write(reinterpret_cast<char*>(&marker_idx), sizeof(uint64_t));
     kmer_pos_ref_f.close();
 
     // remove the temporary file of kmer positions
@@ -179,39 +197,56 @@ void gyeet_index_t::build(const HandleGraph& graph,
 
     // write the bbhash index
     std::string bbhash_out_filename = out_prefix + ".bbx";
-    std::ofstream f(bbhash_out_filename.c_str(), std::ios::binary);
-    bphf->save(f);
+    std::ofstream bbhash_f(bbhash_out_filename.c_str(), std::ios::binary | std::ios::trunc);
+    bphf->save(bbhash_f);
+    bbhash_f.close();
+
+    // write our metadata
+    std::string metadata_filename = out_prefix + ".mtd";
+    std::ofstream metadata_f(metadata_filename.c_str(), std::ios::binary | std::ios::trunc);
+    metadata_f.write(reinterpret_cast<char*>(&seq_length), sizeof(seq_length));
+    metadata_f.write(reinterpret_cast<char*>(&n_nodes), sizeof(n_nodes));
+    metadata_f.write(reinterpret_cast<char*>(&n_edges), sizeof(n_edges));
+    metadata_f.write(reinterpret_cast<char*>(&n_kmers), sizeof(n_kmers));
+    metadata_f.write(reinterpret_cast<char*>(&n_kmer_positions), sizeof(n_kmer_positions));
+    metadata_f.close();
 
 }
 
 void gyeet_index_t::load(const std::string& in_prefix) {
 
+    // load our metadata
+    std::string metadata_filename = in_prefix + ".mtd";
+    std::ifstream metadata_f(metadata_filename.c_str(), std::ios::binary);
+    metadata_f.read(reinterpret_cast<char*>(&seq_length), sizeof(seq_length));
+    metadata_f.read(reinterpret_cast<char*>(&n_nodes), sizeof(n_nodes));
+    metadata_f.read(reinterpret_cast<char*>(&n_edges), sizeof(n_edges));
+    metadata_f.read(reinterpret_cast<char*>(&n_kmers), sizeof(n_kmers));
+    metadata_f.read(reinterpret_cast<char*>(&n_kmer_positions), sizeof(n_kmer_positions));
+    metadata_f.close();
+    
     // load our sequences
     std::string seq_fwd_filename = in_prefix + ".sqf";
     std::string seq_rev_filename = in_prefix + ".sqr";
-    seq_length = filesize(seq_fwd_filename.c_str());
     seq_fwd.mmap_file(seq_fwd_filename.c_str(), READ_ONLY, 0, seq_length);
     seq_rev.mmap_file(seq_rev_filename.c_str(), READ_ONLY, 0, seq_length);
 
-    // load our handle rank structure
+    // load our handle rank structurenn
     std::string seq_bv_filename = in_prefix + ".sbv";
-    std::ifstream seq_bv_f(seq_bv_filename.c_str());
+    std::ifstream seq_bv_f(seq_bv_filename.c_str(), std::ios::binary);
     seq_bv.load(seq_bv_f);
     seq_bv_rank.load(seq_bv_f, &seq_bv);
     
     // load our graph topology
     std::string edge_filename = in_prefix + ".gye";
-    n_edges = filesize(edge_filename.c_str()) / sizeof(handle_t);
     edges.mmap_file(edge_filename.c_str(), READ_ONLY, 0, n_edges);
     std::string node_ref_filename = in_prefix + ".gyn";
     node_ref.mmap_file(node_ref_filename.c_str(), READ_ONLY, 0, n_nodes+1);
 
     // load our kmer table
     std::string kmer_pos_table_filename = in_prefix + ".kpv";
-    n_kmer_positions = filesize(kmer_pos_table_filename.c_str()) / sizeof(kmer_start_end_t);
     kmer_pos_table.mmap_file(kmer_pos_table_filename.c_str(), READ_ONLY, 0, n_kmer_positions);
     std::string kmer_pos_ref_filename = in_prefix + ".kpp";
-    n_kmers = filesize(kmer_pos_ref_filename.c_str())-1;
     kmer_pos_ref.mmap_file(kmer_pos_ref_filename.c_str(), READ_ONLY, 0, n_kmers+1);
 
     // load our bbhash
@@ -224,11 +259,13 @@ void gyeet_index_t::load(const std::string& in_prefix) {
 void gyeet_index_t::for_values_of(const std::string& seq, const std::function<void(const kmer_start_end_t& v)>& lambda) {
     uint64_t hash = djb2_hash64(seq.c_str());
     uint64_t k = bphf->lookup(hash);
-    uint64_t b = kmer_pos_ref[k];
-    uint64_t e = kmer_pos_ref[k+1];
-    std::cerr << "hash " << hash << " " << k << " " << b << " " << e << std::endl;
-    for (uint64_t i = b; i < e; ++i) {
-        lambda(kmer_pos_table[i]);
+    if (k != std::numeric_limits<uint64_t>::max()) {
+        uint64_t b = kmer_pos_ref[k];
+        uint64_t e = kmer_pos_ref[k+1];
+        //std::cerr << "hash " << hash << " " << k << " " << b << " " << e << std::endl;
+        for (uint64_t i = b; i < e; ++i) {
+            lambda(kmer_pos_table[i]);
+        }
     }
 }
 
