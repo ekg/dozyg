@@ -2,6 +2,27 @@
 
 namespace gyeet {
 
+
+std::vector<anchor_t>
+anchors_for_query(
+    const gyeet_index_t index,
+    const char* seq,
+    const size_t& len) {
+    std::vector<anchor_t> anchors;
+    // for each kmer
+    const uint64_t& kmer_length = index.kmer_length;
+    for (uint64_t i = 0; i <= len-kmer_length; ++i) {
+        index.for_values_of(
+            seq + i, kmer_length,
+            [&anchors,&i,&kmer_length](const kmer_start_end_t& v) {
+                anchors.emplace_back(v.begin, v.end,
+                                     seq_pos::encode(i, false),
+                                     seq_pos::encode(i+kmer_length, false));
+            });
+    }
+    return anchors;
+}
+
 std::vector<chain_t>
 chains(std::vector<anchor_t>& anchors,
        const uint64_t& seed_length,

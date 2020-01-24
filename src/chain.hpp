@@ -1,3 +1,5 @@
+#pragma once
+
 #include <iostream>
 #include <chrono>
 #include <vector>
@@ -15,7 +17,19 @@ struct anchor_t {
     seq_pos_t target_end = 0;
     double max_chain_score = 0;
     anchor_t* best_predecessor = nullptr;
+    anchor_t(const seq_pos_t& qb,
+             const seq_pos_t& qe,
+             const seq_pos_t& tb,
+             const seq_pos_t& te)
+        : query_begin(qb)
+        , query_end(qe)
+        , target_begin(tb)
+        , target_end(te) { }
 };
+
+std::vector<anchor_t> anchors_for_query(const gyeet_index_t index,
+                                        const char* seq,
+                                        const size_t& len);
 
 struct chain_t {
     std::vector<anchor_t*> anchors;
