@@ -130,20 +130,20 @@ public:
     void load(const std::string& in_prefix);
 
     // get a key representation of a sequence kmer
-    uint64_t to_key(const char* seq, const size_t& len);
-    uint64_t to_key(const std::string& seq);
+    uint64_t to_key(const char* seq, const size_t& len) const;
+    uint64_t to_key(const std::string& seq) const;
 
     // when sampling kmers, would this key pass our filter?
-    bool keep_key(const uint64_t& key);
+    bool keep_key(const uint64_t& key) const;
 
     // access: iterate over values for a given sequence
-    void for_values_of(const char* seq, const size_t& len, const std::function<void(const kmer_start_end_t& v)>& lambda);
-    void for_values_of(const std::string& seq, const std::function<void(const kmer_start_end_t& v)>& lambda);
+    void for_values_of(const char* seq, const size_t& len, const std::function<void(const kmer_start_end_t& v)>& lambda) const;
+    void for_values_of(const std::string& seq, const std::function<void(const kmer_start_end_t& v)>& lambda) const;
 
     // graph accessors
-    size_t get_length(const handle_t& h);
-    bool is_reverse(const handle_t& h);
-    seq_pos_t get_seq_pos(const handle_t& h);
+    size_t get_length(const handle_t& h) const;
+    bool is_reverse(const handle_t& h) const;
+    seq_pos_t get_seq_pos(const handle_t& h) const;
 };
 
 }

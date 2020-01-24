@@ -280,21 +280,21 @@ void gyeet_index_t::load(const std::string& in_prefix) {
 }
 
 // get a key representation of a sequence kmer
-uint64_t gyeet_index_t::to_key(const char* seq, const size_t& len) {
+uint64_t gyeet_index_t::to_key(const char* seq, const size_t& len) const {
     return djb2_hash64(seq);
 }
 
-uint64_t gyeet_index_t::to_key(const std::string& seq) {
+uint64_t gyeet_index_t::to_key(const std::string& seq) const {
     return to_key(seq.c_str(), seq.length());
 }
 
 // when sampling kmers, would this key pass our filter?
-bool gyeet_index_t::keep_key(const uint64_t& key) {
+bool gyeet_index_t::keep_key(const uint64_t& key) const {
     return sampling_mod == 0 || key % sampling_mod == 0;
 }
 
 // iterate over values of a given key, if we would expect it in the index
-void gyeet_index_t::for_values_of(const char* seq, const size_t& len, const std::function<void(const kmer_start_end_t& v)>& lambda) {
+void gyeet_index_t::for_values_of(const char* seq, const size_t& len, const std::function<void(const kmer_start_end_t& v)>& lambda) const {
     assert(len == kmer_length);
     uint64_t key = to_key(seq, len);
     if (keep_key(key)) {
@@ -310,24 +310,24 @@ void gyeet_index_t::for_values_of(const char* seq, const size_t& len, const std:
 }
 
 // specialization for string input
-void gyeet_index_t::for_values_of(const std::string& seq, const std::function<void(const kmer_start_end_t& v)>& lambda) {
+void gyeet_index_t::for_values_of(const std::string& seq, const std::function<void(const kmer_start_end_t& v)>& lambda) const {
     for_values_of(seq.c_str(), seq.length(), lambda);
 }
 
 
 // node length in the graph
-size_t gyeet_index_t::get_length(const handle_t& h) {
+size_t gyeet_index_t::get_length(const handle_t& h) const {
     uint64_t i = handle_rank(h);
     return node_ref[i+1].seq_idx - node_ref[i].seq_idx;
 }
 
 // if a given handle is reverse (just use the set bit)
-bool gyeet_index_t::is_reverse(const handle_t& h) {
+bool gyeet_index_t::is_reverse(const handle_t& h) const {
     return handle_is_rev(h);
 }
 
 // returns our sequence position type for the given strand
-seq_pos_t gyeet_index_t::get_seq_pos(const handle_t& h) {
+seq_pos_t gyeet_index_t::get_seq_pos(const handle_t& h) const {
     return seq_pos::encode(node_ref[handle_rank(h)].seq_idx, is_reverse(h));
 }
 
