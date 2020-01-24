@@ -5,16 +5,17 @@ namespace gyeet {
 
 std::vector<anchor_t>
 anchors_for_query(
-    const gyeet_index_t index,
+    const gyeet_index_t& index,
     const char* seq,
     const size_t& len) {
     std::vector<anchor_t> anchors;
     // for each kmer
     const uint64_t& kmer_length = index.kmer_length;
     for (uint64_t i = 0; i <= len-kmer_length; ++i) {
+        //std::cerr << std::string(seq+i, kmer_length) << std::endl;
         index.for_values_of(
             seq + i, kmer_length,
-            [&anchors,&i,&kmer_length](const kmer_start_end_t& v) {
+            [&](const kmer_start_end_t& v) {
                 anchors.emplace_back(v.begin, v.end,
                                      seq_pos::encode(i, false),
                                      seq_pos::encode(i+kmer_length, false));
@@ -41,13 +42,14 @@ chains(std::vector<anchor_t>& anchors,
     for (int64_t i = 0; i < anchors.size(); ++i) {
         anchor_t& anchor_i = anchors[i];
         anchor_i.max_chain_score = seed_length;
-        uint64_t min_j = bandwidth > i ? 0 : i - bandwidth;
+        int64_t min_j = bandwidth > i ? 0 : i - bandwidth;
         for (int64_t j = i; j >= min_j; --j) {
             anchor_t& anchor_j = anchors[j];
             double proposed_score = score_anchors(anchor_j,
                                                   anchor_i,
                                                   seed_length,
                                                   max_gap);
+            std::cerr <<"prop score " <<proposed_score <<std::endl;
             if (proposed_score > seed_length
                 && proposed_score > anchor_i.max_chain_score) {
                 anchor_i.max_chain_score = proposed_score;
@@ -57,9 +59,10 @@ chains(std::vector<anchor_t>& anchors,
     }
     // collect chains
     std::vector<chain_t> chains;
-    uint64_t i = anchors.size()-1;
+    int64_t i = anchors.size()-1;
     while (i >= 0) {
         anchor_t* a = &anchors[i];
+        std::cerr << a->best_predecessor << " "<< a->max_chain_score <<std::endl;
         if (a->best_predecessor != nullptr
             && a->max_chain_score > seed_length) { //!curr_chain) {
             chains.emplace_back();
@@ -77,6 +80,7 @@ chains(std::vector<anchor_t>& anchors,
         }
         --i;
     }
+    std::cerr << "chain count " <<chains.size() <<std::endl;
     // sort the chains by score, descending
     std::sort(chains.begin(), chains.end(),
               [](const chain_t& a,
@@ -137,12 +141,13 @@ double score_anchors(const anchor_t& a,
                      const uint64_t& seed_length,
                      const uint64_t& max_gap) {
     if (a.query_end >= b.query_end) {
-        return std::numeric_limits<double>::min();
+        return -std::numeric_limits<double>::max();
     } else {
         uint64_t query_length = b.query_end - a.query_end;
         uint64_t target_length = b.target_end - a.target_end;
         if (std::max(query_length, target_length) > max_gap) {
-            return std::numeric_limits<double>::min();
+            return -std::numeric_limits<double>::max();
+            //return std::numeric_limits<double>::min();
         } else {
             uint64_t gap_length = std::abs((int64_t)query_length - (int64_t)target_length);
             double gap_cost = gap_length == 0 ? 0
@@ -150,7 +155,8 @@ double score_anchors(const anchor_t& a,
             uint64_t match_length = std::min(std::min(query_length,
                                                       target_length),
                                              seed_length);
-            return a.max_chain_score + match_length - gap_cost;
+            // wtf here?
+            return -( a.max_chain_score + match_length - gap_cost );
         }
     }
 }
