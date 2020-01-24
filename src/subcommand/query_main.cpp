@@ -24,7 +24,7 @@ int main_query(int argc, char** argv) {
     args::HelpFlag help(parser, "help", "display this help summary", {'h', "help"});
     args::ValueFlag<std::string> graph_in_file(parser, "FILE", "load the graph from this file", {'i', "in"});
     args::ValueFlag<std::string> idx_in_file(parser, "FILE", "load the index from this prefix", {'x', "index"});
-    args::ValueFlag<uint64_t> kmer_length(parser, "K", "the length of the kmers to use for queries", {'k', "kmer-length"});
+    //args::ValueFlag<uint64_t> kmer_length(parser, "K", "the length of the kmers to use for queries", {'k', "kmer-length"});
     args::ValueFlag<uint64_t> max_furcations(parser, "N", "break at edges that would be induce this many furcations in a kmer", {'e', "max-furcations"});
     args::ValueFlag<uint64_t> max_degree(parser, "N", "remove nodes that have degree greater that this level", {'D', "max-degree"});
     args::ValueFlag<uint64_t> threads(parser, "N", "number of threads to use", {'t', "threads"});
@@ -47,9 +47,7 @@ int main_query(int argc, char** argv) {
     }
 
     odgi::graph_t graph;
-    //xg::XG graph;
     assert(argc > 0);
-    assert(args::get(kmer_length));
     std::string infile = args::get(graph_in_file);
     if (infile.size()) {
         if (infile == "-") {
@@ -81,7 +79,7 @@ int main_query(int argc, char** argv) {
 
     algorithms::for_each_kmer(
         graph,
-        args::get(kmer_length),
+        index.kmer_length,
         args::get(max_furcations),
         args::get(max_degree),
         [&](const kmer_t& kmer) {
@@ -91,16 +89,18 @@ int main_query(int argc, char** argv) {
                 seq_pos_t end_pos = index.get_seq_pos(kmer.end.handle) + kmer.end.pos;
                 //std::cerr << "begin/end " << seq_pos::to_string(begin_pos) << " " << seq_pos::to_string(end_pos) << std::endl;
                 // check if we can find it in the index
-                bool found = false;
-                index.for_values_of(
-                    kmer.seq,
-                    [&](const kmer_start_end_t& p) {
-                        //std::cerr << "--> begin/end " << seq_pos::to_string(p.begin) << " " << seq_pos::to_string(p.end) << std::endl;
-                        if (p.begin == begin_pos && p.end == end_pos) {
-                            found = true;
-                        }
-                    });
-                assert(found);
+                if (index.keep_key(index.to_key(kmer.seq))) {
+                    bool found = false;
+                    index.for_values_of(
+                        kmer.seq,
+                        [&](const kmer_start_end_t& p) {
+                            //std::cerr << "--> begin/end " << seq_pos::to_string(p.begin) << " " << seq_pos::to_string(p.end) << std::endl;
+                            if (p.begin == begin_pos && p.end == end_pos) {
+                                found = true;
+                            }
+                        });
+                    assert(found);
+                }
             }
         });
 

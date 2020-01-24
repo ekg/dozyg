@@ -17,13 +17,25 @@ gyeet_index_t::~gyeet_index_t(void) {
 }
 
 void gyeet_index_t::build(const HandleGraph& graph,
-                          const uint64_t& kmer_length,
+                          const uint64_t& _kmer_length,
                           const uint64_t& max_furcations,
                           const uint64_t& max_degree,
+                          const double& sampling_rate,
                           const std::string& out_prefix) {
 
     // stash our node count
     n_nodes = graph.get_node_count();
+
+    // and our kmer size
+    kmer_length = _kmer_length;
+
+    // calculate the sampling mod
+    if (sampling_rate < 1.0) {
+        sampling_mod = std::round(1.0 / sampling_rate);
+    } else {
+        assert(sampling_rate == 1.0);
+        sampling_mod = 0;
+    }
 
     // collect our sequences
     graph.for_each_handle(
@@ -109,18 +121,20 @@ void gyeet_index_t::build(const HandleGraph& graph,
         graph, kmer_length, max_furcations, max_degree,
         [&](const kmer_t& kmer) {
             if (kmer.seq.find('N') == std::string::npos) {
-                uint64_t hash = djb2_hash64(kmer.seq.c_str());
-                seq_pos_t begin_pos = get_seq_pos(kmer.begin.handle) + kmer.begin.pos;
-                seq_pos_t end_pos = get_seq_pos(kmer.end.handle) + kmer.end.pos;
-                kmer_pos_t p = { hash, begin_pos, end_pos };
+                uint64_t hash = to_key(kmer.seq.c_str(), kmer.seq.length());
+                if (keep_key(hash)) {
+                    seq_pos_t begin_pos = get_seq_pos(kmer.begin.handle) + kmer.begin.pos;
+                    seq_pos_t end_pos = get_seq_pos(kmer.end.handle) + kmer.end.pos;
+                    kmer_pos_t p = { hash, begin_pos, end_pos };
 #pragma omp critical (kmer_pos_write)
-                {
-                    ++n_kmer_positions;
-                    kmer_pos_f.write(reinterpret_cast<char*>(&p), sizeof(kmer_pos_t));
-                }
+                    {
+                        ++n_kmer_positions;
+                        kmer_pos_f.write(reinterpret_cast<char*>(&p), sizeof(kmer_pos_t));
+                    }
 #pragma omp critical (kmer_set_write)
-                {
-                    kmer_set_f.write(reinterpret_cast<char*>(&hash), sizeof(uint64_t));
+                    {
+                        kmer_set_f.write(reinterpret_cast<char*>(&hash), sizeof(uint64_t));
+                    }
                 }
             }
         });
@@ -205,11 +219,18 @@ void gyeet_index_t::build(const HandleGraph& graph,
     std::string metadata_filename = out_prefix + ".mtd";
     std::ofstream metadata_f(metadata_filename.c_str(), std::ios::binary | std::ios::trunc);
     metadata_f.write(reinterpret_cast<char*>(&seq_length), sizeof(seq_length));
+    metadata_f.write(reinterpret_cast<char*>(&kmer_length), sizeof(kmer_length));
+    metadata_f.write(reinterpret_cast<char*>(&sampling_mod), sizeof(sampling_mod));
     metadata_f.write(reinterpret_cast<char*>(&n_nodes), sizeof(n_nodes));
     metadata_f.write(reinterpret_cast<char*>(&n_edges), sizeof(n_edges));
     metadata_f.write(reinterpret_cast<char*>(&n_kmers), sizeof(n_kmers));
     metadata_f.write(reinterpret_cast<char*>(&n_kmer_positions), sizeof(n_kmer_positions));
     metadata_f.close();
+
+    // todo
+    // update the metadata
+    // concatenate all the files together
+    // remove the temporary files
 
 }
 
@@ -219,6 +240,8 @@ void gyeet_index_t::load(const std::string& in_prefix) {
     std::string metadata_filename = in_prefix + ".mtd";
     std::ifstream metadata_f(metadata_filename.c_str(), std::ios::binary);
     metadata_f.read(reinterpret_cast<char*>(&seq_length), sizeof(seq_length));
+    metadata_f.read(reinterpret_cast<char*>(&kmer_length), sizeof(kmer_length));
+    metadata_f.read(reinterpret_cast<char*>(&sampling_mod), sizeof(sampling_mod));
     metadata_f.read(reinterpret_cast<char*>(&n_nodes), sizeof(n_nodes));
     metadata_f.read(reinterpret_cast<char*>(&n_edges), sizeof(n_edges));
     metadata_f.read(reinterpret_cast<char*>(&n_kmers), sizeof(n_kmers));
@@ -256,28 +279,54 @@ void gyeet_index_t::load(const std::string& in_prefix) {
     bphf->load(f);
 }
 
-void gyeet_index_t::for_values_of(const std::string& seq, const std::function<void(const kmer_start_end_t& v)>& lambda) {
-    uint64_t hash = djb2_hash64(seq.c_str());
-    uint64_t k = bphf->lookup(hash);
-    if (k != std::numeric_limits<uint64_t>::max()) {
-        uint64_t b = kmer_pos_ref[k];
-        uint64_t e = kmer_pos_ref[k+1];
-        //std::cerr << "hash " << hash << " " << k << " " << b << " " << e << std::endl;
-        for (uint64_t i = b; i < e; ++i) {
-            lambda(kmer_pos_table[i]);
+// get a key representation of a sequence kmer
+uint64_t gyeet_index_t::to_key(const char* seq, const size_t& len) {
+    return djb2_hash64(seq);
+}
+
+uint64_t gyeet_index_t::to_key(const std::string& seq) {
+    return to_key(seq.c_str(), seq.length());
+}
+
+// when sampling kmers, would this key pass our filter?
+bool gyeet_index_t::keep_key(const uint64_t& key) {
+    return sampling_mod == 0 || key % sampling_mod == 0;
+}
+
+// iterate over values of a given key, if we would expect it in the index
+void gyeet_index_t::for_values_of(const char* seq, const size_t& len, const std::function<void(const kmer_start_end_t& v)>& lambda) {
+    assert(len == kmer_length);
+    uint64_t key = to_key(seq, len);
+    if (keep_key(key)) {
+        uint64_t idx = bphf->lookup(key);
+        if (idx != std::numeric_limits<uint64_t>::max()) {
+            uint64_t b = kmer_pos_ref[idx];
+            uint64_t e = kmer_pos_ref[idx+1];
+            for (uint64_t i = b; i < e; ++i) {
+                lambda(kmer_pos_table[i]);
+            }
         }
     }
 }
 
+// specialization for string input
+void gyeet_index_t::for_values_of(const std::string& seq, const std::function<void(const kmer_start_end_t& v)>& lambda) {
+    for_values_of(seq.c_str(), seq.length(), lambda);
+}
+
+
+// node length in the graph
 size_t gyeet_index_t::get_length(const handle_t& h) {
     uint64_t i = handle_rank(h);
     return node_ref[i+1].seq_idx - node_ref[i].seq_idx;
 }
 
+// if a given handle is reverse (just use the set bit)
 bool gyeet_index_t::is_reverse(const handle_t& h) {
     return handle_is_rev(h);
 }
 
+// returns our sequence position type for the given strand
 seq_pos_t gyeet_index_t::get_seq_pos(const handle_t& h) {
     return seq_pos::encode(node_ref[handle_rank(h)].seq_idx, is_reverse(h));
 }

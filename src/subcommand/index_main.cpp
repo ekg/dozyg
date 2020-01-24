@@ -27,6 +27,7 @@ int main_index(int argc, char** argv) {
     args::ValueFlag<uint64_t> kmer_length(parser, "K", "the length of the kmers to generate", {'k', "kmer-length"});
     args::ValueFlag<uint64_t> max_furcations(parser, "N", "break at edges that would be induce this many furcations in a kmer", {'e', "max-furcations"});
     args::ValueFlag<uint64_t> max_degree(parser, "N", "remove nodes that have degree greater that this level", {'D', "max-degree"});
+    args::ValueFlag<double> sampling_r(parser, "RATE", "build a modimizer index by keeping kmers whose hash % round(RATE/1) == 0", {'r', "sampling-rate"});
     args::ValueFlag<uint64_t> threads(parser, "N", "number of threads to use", {'t', "threads"});
     //args::ValueFlag<std::string> work_prefix(parser, "FILE", "write temporary files with this prefix", {'w', "work-prefix"});
     //args::Flag kmers_stdout(parser, "", "write the kmers to stdout", {'c', "stdout"});
@@ -76,11 +77,14 @@ int main_index(int argc, char** argv) {
         idx_prefix = args::get(idx_out_file);
     }
 
+    double sampling_rate = args::get(sampling_r) ? args::get(sampling_r) : 1.0;
+
     gyeet_index_t index;
     index.build(graph,
                 args::get(kmer_length),
                 args::get(max_furcations),
                 args::get(max_degree),
+                sampling_rate,
                 idx_prefix);
 
     return 0;

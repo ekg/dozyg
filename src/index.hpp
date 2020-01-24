@@ -79,8 +79,10 @@ struct node_ref_t {
 
 class gyeet_index_t {
 public:
-    // the kmer sizes that this graph was built on
-    std::vector<uint64_t> kmer_sizes;
+    // the kmer size that this graph was built on
+    uint64_t kmer_length = 0;
+    // consider only kmers where to_key(kmer) % sampling_mobd == 0
+    uint64_t sampling_mod = 0;
     // total sequence length of the graph
     uint64_t seq_length = 0;
     // forward sequence of the graph, stored here for fast access during alignment
@@ -118,15 +120,24 @@ public:
 
     // build from an input graph
     void build(const HandleGraph& graph,
-               const uint64_t& kmer_length,
+               const uint64_t& _kmer_length,
                const uint64_t& max_furcations,
                const uint64_t& max_degree,
+               const double& sampling_rate,
                const std::string& out_prefix);
 
     // load an existing index
     void load(const std::string& in_prefix);
 
+    // get a key representation of a sequence kmer
+    uint64_t to_key(const char* seq, const size_t& len);
+    uint64_t to_key(const std::string& seq);
+
+    // when sampling kmers, would this key pass our filter?
+    bool keep_key(const uint64_t& key);
+
     // access: iterate over values for a given sequence
+    void for_values_of(const char* seq, const size_t& len, const std::function<void(const kmer_start_end_t& v)>& lambda);
     void for_values_of(const std::string& seq, const std::function<void(const kmer_start_end_t& v)>& lambda);
 
     // graph accessors
