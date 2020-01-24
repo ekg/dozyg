@@ -204,6 +204,7 @@ add_library(gyeet_objs OBJECT
   ${CMAKE_SOURCE_DIR}/src/node.cpp # for odgi
   ${CMAKE_SOURCE_DIR}/src/xg.cpp
   ${CMAKE_SOURCE_DIR}/src/index.cpp
+  ${CMAKE_SOURCE_DIR}/src/chain.cpp
   ${CMAKE_SOURCE_DIR}/src/position.cpp
   ${CMAKE_SOURCE_DIR}/src/threads.cpp
   ${CMAKE_SOURCE_DIR}/src/utility.cpp
@@ -213,8 +214,6 @@ add_library(gyeet_objs OBJECT
   ${CMAKE_SOURCE_DIR}/src/algorithms/dfs.cpp
   ${CMAKE_SOURCE_DIR}/src/algorithms/kmer.cpp
   ${CMAKE_SOURCE_DIR}/src/algorithms/hash.cpp
-  ${CMAKE_SOURCE_DIR}/src/algorithms/remove_high_degree.cpp
-  ${CMAKE_SOURCE_DIR}/src/algorithms/prune.cpp
   )
 
 set(gyeet_DEPS 
