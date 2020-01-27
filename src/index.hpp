@@ -32,6 +32,15 @@ inline bool handle_is_rev(const handle_t& handle) {
     return number_bool_packing::unpack_bit(handle);
 }
 
+inline handle_t make_handle(const uint64_t& rank, const bool& is_rev) {
+    return number_bool_packing::pack(rank, is_rev);
+}
+
+// hard coded ID/handle mapping
+inline nid_t to_id(const handle_t& handle) {
+    return handle_rank(handle) + 1;
+}
+
 
 // seq_pos_t defines an oriented position in the sequence space of the graph
 // 
@@ -146,6 +155,7 @@ public:
     size_t get_length(const handle_t& h) const;
     bool is_reverse(const handle_t& h) const;
     seq_pos_t get_seq_pos(const handle_t& h) const;
+    handle_t get_handle_at(const seq_pos_t& pos) const;
 };
 
 }

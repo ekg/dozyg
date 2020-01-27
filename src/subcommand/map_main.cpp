@@ -6,6 +6,7 @@
 #include "threads.hpp"
 #include "index.hpp"
 #include "chain.hpp"
+#include "align.hpp"
 
 namespace gyeet {
 
@@ -77,6 +78,20 @@ int main_map(int argc, char** argv) {
                       << chain.anchors.size() << " "
                       << chain.is_secondary
                       << std::endl;
+            nid_t last = 0;
+            for (auto& a : chain.anchors) {
+                std::cout << "," << a->query_begin << "/" << seq_pos::to_string(a->target_begin);
+            }
+            std::cout << std::endl;
+            for_handle_in_chain(
+                chain, index,
+                [&last](const handle_t& h) {
+                    nid_t curr = to_id(h);
+                    if (curr != last) {
+                        std::cout << (handle_is_rev(h) ? "<" : ">") << curr;
+                        last = curr;
+                    }
+                });
         }
     }
 

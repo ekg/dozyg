@@ -205,6 +205,15 @@ ExternalProject_Add(cgranges
 ExternalProject_Get_property(cgranges SOURCE_DIR)
 set(cgranges_INCLUDE "${SOURCE_DIR}/cpp")
 
+# edlib
+ExternalProject_Add(edlib
+  SOURCE_DIR "${CMAKE_SOURCE_DIR}/deps/edlib"
+  CMAKE_ARGS "${CMAKE_ARGS};-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>"
+  UPDATE_COMMAND "")
+ExternalProject_Get_property(edlib INSTALL_DIR)
+set(edlib_INCLUDE "${INSTALL_DIR}/include")
+set(edlib_LIB "${INSTALL_DIR}/lib")
+
 #set(CMAKE_BUILD_TYPE Release)
 set(CMAKE_BUILD_TYPE Debug)
 
@@ -215,6 +224,7 @@ add_library(gyeet_objs OBJECT
   ${CMAKE_SOURCE_DIR}/src/xg.cpp
   ${CMAKE_SOURCE_DIR}/src/index.cpp
   ${CMAKE_SOURCE_DIR}/src/chain.cpp
+  ${CMAKE_SOURCE_DIR}/src/align.cpp
   ${CMAKE_SOURCE_DIR}/src/position.cpp
   ${CMAKE_SOURCE_DIR}/src/threads.cpp
   ${CMAKE_SOURCE_DIR}/src/utility.cpp
@@ -242,7 +252,8 @@ set(gyeet_DEPS
     mmmultimap
     mmap_allocator
     ips4o
-    cgranges)
+    cgranges
+    edlib)
 add_dependencies(gyeet_objs ${gyeet_DEPS})
 
 set(gyeet_INCLUDES
@@ -263,8 +274,8 @@ set(gyeet_INCLUDES
   ${mmmultimap_INCLUDE}
   ${mmap_allocator_INCLUDE}
   ${ips4o_INCLUDE}
-  ${cgranges_INCLUDE})
-  
+  ${cgranges_INCLUDE}
+  ${edlib_INCLUDE})
 
 set(gyeet_LIBS
   ${sdsl-lite_LIB}/libsdsl.a
@@ -272,6 +283,7 @@ set(gyeet_LIBS
   ${sdsl-lite-divsufsort_LIB}/libdivsufsort64.a
   ${handlegraph_LIB}/libhandlegraph.a
   ${mmap_allocator_LIB}/libmmap_allocator.a
+  ${edlib_LIB}/libedlib.a
   dl
   atomic)
 
@@ -303,6 +315,7 @@ add_executable(gyeet
   ${CMAKE_SOURCE_DIR}/src/main.cpp)
 target_link_libraries(gyeet ${gyeet_LIBS})
 set_target_properties(gyeet PROPERTIES OUTPUT_NAME "gyeet")
+
 
 #if (NOT EXISTS ${CMAKE_SOURCE_DIR}/deps/pybind11/CMakeLists.txt)
 #  execute_process(COMMAND git submodule update --init --recursive)

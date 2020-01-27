@@ -316,7 +316,6 @@ void gyeet_index_t::for_values_of(const std::string& seq, const std::function<vo
     for_values_of(seq.c_str(), seq.length(), lambda);
 }
 
-
 // node length in the graph
 size_t gyeet_index_t::get_length(const handle_t& h) const {
     uint64_t i = handle_rank(h);
@@ -330,7 +329,22 @@ bool gyeet_index_t::is_reverse(const handle_t& h) const {
 
 // returns our sequence position type for the given strand
 seq_pos_t gyeet_index_t::get_seq_pos(const handle_t& h) const {
-    return seq_pos::encode(node_ref[handle_rank(h)].seq_idx, is_reverse(h));
+    if (is_reverse(h)) {
+        // flip our handle start onto the reverse strand
+        return seq_pos::encode(seq_length
+                               - node_ref[handle_rank(h)].seq_idx
+                               - get_length(h),
+                               is_reverse(h));
+    } else {
+        return seq_pos::encode(node_ref[handle_rank(h)].seq_idx,
+                               is_reverse(h));
+    }
+}
+
+handle_t gyeet_index_t::get_handle_at(const seq_pos_t& pos) const {
+    bool is_rev = seq_pos::is_rev(pos);
+    uint64_t offset = seq_pos::offset(pos);
+    return make_handle(seq_bv_rank(offset), is_rev);
 }
 
 }
