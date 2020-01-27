@@ -83,7 +83,7 @@ int main_map(int argc, char** argv) {
                 std::cout << "," << a->query_begin << "/" << seq_pos::to_string(a->target_begin);
             }
             std::cout << std::endl;
-            for_handle_in_chain(
+            for_handle_at_anchor_begin_in_chain(
                 chain, index,
                 [&last](const handle_t& h) {
                     nid_t curr = to_id(h);

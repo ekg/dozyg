@@ -42,16 +42,6 @@ chains(std::vector<anchor_t>& anchors,
                  const anchor_t& b) {
                   return a.target_end < b.target_end;
               });
-    /* // would be needed if we threw in duplicates, but our indexing prevents it
-    anchors.erase(
-        std::unique(
-            anchors.begin(), anchors.end(),
-            [](const anchor_t& a,
-               const anchor_t& b) {
-                return a.query_begin == b.query_begin
-                    && a.target_begin == b.target_begin;
-            }), anchors.end());
-    */
     // calculate max chaining scores under our bandwidth
     // we walk from the last to first anchor
     for (int64_t i = 0; i < anchors.size(); ++i) {
