@@ -181,6 +181,17 @@ void gyeet_index_t::build(const HandleGraph& graph,
                             && (a.begin < b.begin
                                 || a.begin == b.begin && a.end < b.end);
         });
+    // take uniques because our kmer generation seems to make a few non-unique kmer positions
+    kmer_pos.erase(
+        std::unique(
+            kmer_pos.begin(), kmer_pos.end(),
+            [](const kmer_pos_t& a,
+               const kmer_pos_t& b) {
+                return a.hash == b.hash
+                    && a.begin == b.begin
+                    && a.end == a.end;
+            }), kmer_pos.end());
+    n_kmer_positions = kmer_pos.size();
 
     // now we can iterate through our keys/values in order, storing them somewhere
     std::string kmer_pos_table_filename = out_prefix + ".kpv";

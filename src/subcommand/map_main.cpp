@@ -92,6 +92,7 @@ int main_map(int argc, char** argv) {
                         last = curr;
                     }
                 });
+            std::cout << std::endl;
         }
     }
 

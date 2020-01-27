@@ -42,6 +42,16 @@ chains(std::vector<anchor_t>& anchors,
                  const anchor_t& b) {
                   return a.target_end < b.target_end;
               });
+    /* // would be needed if we threw in duplicates, but our indexing prevents it
+    anchors.erase(
+        std::unique(
+            anchors.begin(), anchors.end(),
+            [](const anchor_t& a,
+               const anchor_t& b) {
+                return a.query_begin == b.query_begin
+                    && a.target_begin == b.target_begin;
+            }), anchors.end());
+    */
     // calculate max chaining scores under our bandwidth
     // we walk from the last to first anchor
     for (int64_t i = 0; i < anchors.size(); ++i) {
@@ -65,7 +75,7 @@ chains(std::vector<anchor_t>& anchors,
             }
         }
     }
-    /*
+
     std::ofstream out("chains.dot");
     out << "digraph G {" << std::endl;
     for (auto& anchor : anchors) {
@@ -79,7 +89,7 @@ chains(std::vector<anchor_t>& anchors,
     }
     out << "}" << std::endl;
     out.close();
-    */
+
     // collect chains
     std::vector<chain_t> chains;
     int64_t i = anchors.size()-1;
@@ -112,11 +122,9 @@ chains(std::vector<anchor_t>& anchors,
                   return a.score > b.score;
               });
     uint64_t j = 0;
-    /*
     for (auto& chain : chains) {
         std::cerr << "chain " << ++j << " " << &chain << " " << chain.anchors.size() << " " << chain.score << " " << chain.mapping_quality << " " << chain.is_secondary << " " << chain.processed() << std::endl;
     }
-    */
     // find the primary chains by examining their overlaps in the query
     IITree<seq_pos_t, chain_t*> tree;
     for (auto& chain : chains) {
