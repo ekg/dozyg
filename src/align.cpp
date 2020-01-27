@@ -68,7 +68,7 @@ void write_chain_gaf(
 // apply global alignment within these regions to obtain sequence to graph sequence mapping
 // use this to determine the correct graph path (and check it)
 // re-score using the graph topology
-void align(
+alignment_t align(
     const char* query,
     const chain_t& chain,
     const gyeet_index_t& index) {
@@ -88,5 +88,62 @@ void align(
     free(cigar);
     edlibFreeAlignResult(result);
 }
+
+void fill_alignment_path(
+    alignment_t& aln,
+    const gyeet_index_t& index,
+    const unsigned char* const alignment,
+    const int alignmentLength) {
+    
+}
+
+void fill_alignment_cigar(
+    alignment_t& aln,
+    const unsigned char* const alignment,
+    const int alignmentLength,
+    const bool& extended_cigar) {
+    // Maps move code from alignment to char in cigar.
+    //                        0    1    2    3
+    char moveCodeToChar[] = {'=', 'I', 'D', 'X'};
+    if (!extended_cigar) {
+        moveCodeToChar[0] = moveCodeToChar[3] = 'M';
+    }
+    vector<char>* cigar = new vector<char>();
+    char lastMove = 0;  // Char of last move. 0 if there was no previous move.
+    int numOfSameMoves = 0;
+    for (int i = 0; i <= alignmentLength; i++) {
+        // if new sequence of same moves started
+        if (i == alignmentLength || (moveCodeToChar[alignment[i]] != lastMove && lastMove != 0)) {
+            // Write number of moves to cigar string.
+            int numDigits = 0;
+            for (; numOfSameMoves; numOfSameMoves /= 10) {
+                cigar->push_back('0' + numOfSameMoves % 10);
+                numDigits++;
+            }
+            reverse(cigar->end() - numDigits, cigar->end());
+            // Write code of move to cigar string.
+            cigar->push_back(lastMove);
+            // If not at the end, start new sequence of moves.
+            if (i < alignmentLength) {
+                // Check if alignment has valid values.
+                if (alignment[i] > 3) {
+                    assert(false);
+                    delete cigar;
+                    return 0;
+                }
+                numOfSameMoves = 0;
+            }
+        }
+        if (i < alignmentLength) {
+            lastMove = moveCodeToChar[alignment[i]];
+            numOfSameMoves++;
+        }
+    }
+    cigar->push_back(0);  // Null character termination.
+    aln.cigar = string(cigar); // save in our alignment
+    delete cigar;
+}
+
+
 
 }
