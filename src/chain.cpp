@@ -65,7 +65,7 @@ chains(std::vector<anchor_t>& anchors,
             }
         }
     }
-
+    /*
     std::ofstream out("chains.dot");
     out << "digraph G {" << std::endl;
     for (auto& anchor : anchors) {
@@ -79,7 +79,7 @@ chains(std::vector<anchor_t>& anchors,
     }
     out << "}" << std::endl;
     out.close();
-
+    */
     // collect chains
     std::vector<chain_t> chains;
     int64_t i = anchors.size()-1;
@@ -111,10 +111,12 @@ chains(std::vector<anchor_t>& anchors,
                  const chain_t& b) {
                   return a.score > b.score;
               });
+    /*
     uint64_t j = 0;
     for (auto& chain : chains) {
         std::cerr << "chain " << ++j << " " << &chain << " " << chain.anchors.size() << " " << chain.score << " " << chain.mapping_quality << " " << chain.is_secondary << " " << chain.processed() << std::endl;
     }
+    */
     // find the primary chains by examining their overlaps in the query
     IITree<seq_pos_t, chain_t*> tree;
     for (auto& chain : chains) {
