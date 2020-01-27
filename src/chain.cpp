@@ -54,28 +54,45 @@ chains(std::vector<anchor_t>& anchors,
                                                   anchor_i,
                                                   seed_length,
                                                   max_gap);
-            std::cerr <<"prop score " <<proposed_score <<std::endl;
-            if (proposed_score > seed_length
-                && proposed_score > anchor_i.max_chain_score) {
+            //std::cerr <<"prop score " <<proposed_score <<std::endl;
+            if (proposed_score > anchor_i.max_chain_score) {
                 anchor_i.max_chain_score = proposed_score;
                 anchor_i.best_predecessor = &anchor_j;
             }
         }
     }
+
+    /*
+    std::ofstream out("chains.dot");
+    out << "digraph G {" << std::endl;
+    for (auto& anchor : anchors) {
+        out << "\"" << &anchor << "\" "
+            << "[shape=box label=\"" << "score=" << anchor.max_chain_score << ","
+            << "(" << seq_pos::to_string(anchor.query_begin) << ".."
+            << seq_pos::to_string(anchor.query_end) << "),"
+            << "(" << seq_pos::to_string(anchor.target_begin) << ".."
+            << seq_pos::to_string(anchor.target_end) << ")\"];" << std::endl
+            << "\"" << anchor.best_predecessor << "\" -> \"" << &anchor << "\";" << std::endl;
+    }
+    out << "}" << std::endl;
+    out.close();
+    */
+
     // collect chains
     std::vector<chain_t> chains;
     int64_t i = anchors.size()-1;
     while (i >= 0) {
         anchor_t* a = &anchors[i];
-        std::cerr << "best predecessor " << a->best_predecessor << " "<< a->max_chain_score <<std::endl;
+        //std::cerr << "best predecessor " << a->best_predecessor << " "<< a->max_chain_score <<std::endl;
         if (a->best_predecessor != nullptr
             && a->max_chain_score > seed_length) { //!curr_chain) {
             chains.emplace_back();
             auto& curr_chain = chains.back();
+            curr_chain.anchors.push_back(a);
             curr_chain.score = a->max_chain_score;
             do {
-                curr_chain.anchors.push_back(a);
                 anchor_t* b = a->best_predecessor;
+                curr_chain.anchors.push_back(b);
                 a->best_predecessor = nullptr; // mark done
                 a = b; // swap
             } while (a->best_predecessor != nullptr);
@@ -85,13 +102,19 @@ chains(std::vector<anchor_t>& anchors,
         }
         --i;
     }
-    std::cerr << "chain count " <<chains.size() <<std::endl;
+    //std::cerr << "chain count " <<chains.size() <<std::endl;
     // sort the chains by score, descending
     std::sort(chains.begin(), chains.end(),
               [](const chain_t& a,
                  const chain_t& b) {
                   return a.score > b.score;
               });
+    uint64_t j = 0;
+    /*
+    for (auto& chain : chains) {
+        std::cerr << "chain " << ++j << " " << &chain << " " << chain.anchors.size() << " " << chain.score << " " << chain.mapping_quality << " " << chain.is_secondary << " " << chain.processed() << std::endl;
+    }
+    */
     // find the primary chains by examining their overlaps in the query
     IITree<seq_pos_t, chain_t*> tree;
     for (auto& chain : chains) {
@@ -110,21 +133,21 @@ chains(std::vector<anchor_t>& anchors,
             tree.overlap(chain_begin, chain_end, ovlp);
             for (auto& idx : ovlp) {
                 chain_t* other_chain = tree.data(idx);
-                if (!other_chain->processed()) { // not sure we need this check, based on definitions and order of evaluation
+                if (other_chain != &chain && other_chain->score <= chain.score) {
                     const seq_pos_t& other_begin = tree.start(idx);
                     const seq_pos_t& other_end = tree.end(idx);
                     uint64_t other_length = other_end - other_begin;
                     seq_pos_t ovlp_begin = std::max(chain_begin, other_begin);
-                    seq_pos_t ovlp_end = std::min(chain_begin, other_begin);
+                    seq_pos_t ovlp_end = std::min(chain_end, other_end);
                     uint64_t ovlp_length = ovlp_end - ovlp_begin;
-                    if ((double)other_length < (double)ovlp_length * secondary_chain_threshold) {
+                    if ((double)ovlp_length > (double)other_length * secondary_chain_threshold) {
                         // this chain is secondary
                         other_chain->mapping_quality = 0;
                         other_chain->is_secondary = true;
-                        if (best_secondary->score < other_chain->score
-                            || best_secondary == nullptr) {
-                            best_secondary = other_chain;
-                        }
+                    }
+                    if (best_secondary == nullptr
+                        || best_secondary->score < other_chain->score) {
+                        best_secondary = other_chain;
                     }
                 }
             }
@@ -154,14 +177,14 @@ double score_anchors(const anchor_t& a,
             return -std::numeric_limits<double>::max();
             //return std::numeric_limits<double>::min();
         } else {
-            std::cerr << "query_length " << query_length << " target_length " << target_length << std::endl;
+            //std::cerr << "query_length " << query_length << " target_length " << target_length << std::endl;
             uint64_t gap_length = std::abs((int64_t)query_length - (int64_t)target_length);
             double gap_cost = gap_length == 0 ? 0
                 : 0.01 * seed_length * gap_length + 0.5 * log2(gap_length);
             uint64_t match_length = std::min(std::min(query_length,
                                                       target_length),
                                              seed_length);
-            std::cerr << "chain score is " << a.max_chain_score + match_length - gap_cost << std::endl;
+            //std::cerr << "chain score is " << a.max_chain_score + match_length - gap_cost << std::endl;
             return a.max_chain_score + match_length - gap_cost;
         }
     }
