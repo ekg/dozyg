@@ -96,6 +96,7 @@ int main_query(int argc, char** argv) {
                         [&](const kmer_start_end_t& p) {
                             //std::cerr << "--> begin/end " << seq_pos::to_string(p.begin) << " " << seq_pos::to_string(p.end) << std::endl;
                             if (p.begin == begin_pos && p.end == end_pos) {
+                                //std::cerr << "found!" << std::endl;
                                 found = true;
                             }
                         });

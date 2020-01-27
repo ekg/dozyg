@@ -83,7 +83,7 @@ class gyeet_index_t {
 public:
     // the kmer size that this graph was built on
     uint64_t kmer_length = 0;
-    // consider only kmers where to_key(kmer) % sampling_mobd == 0
+    // consider only kmers where to_key(kmer) % sampling_mod == 0
     uint64_t sampling_mod = 0;
     // total sequence length of the graph
     uint64_t seq_length = 0;

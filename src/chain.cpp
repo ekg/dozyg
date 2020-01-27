@@ -12,13 +12,18 @@ anchors_for_query(
     // for each kmer
     const uint64_t& kmer_length = index.kmer_length;
     for (uint64_t i = 0; i <= len-kmer_length; ++i) {
-        //std::cerr << std::string(seq+i, kmer_length) << std::endl;
+        //std::cerr << std::string(seq+i, kmer_length) << " " << i << " " << std::endl;
         index.for_values_of(
             seq + i, kmer_length,
             [&](const kmer_start_end_t& v) {
-                anchors.emplace_back(v.begin, v.end,
-                                     seq_pos::encode(i, false),
-                                     seq_pos::encode(i+kmer_length, false));
+                /*
+                std::cerr << std::string(seq+i, kmer_length) << " " << i << " "
+                          << seq_pos::offset(v.begin) << " " << seq_pos::offset(v.end)
+                          << std::endl;
+                */
+                anchors.emplace_back(seq_pos::encode(i, false),
+                                     seq_pos::encode(i+kmer_length, false),
+                                     v.begin, v.end);
             });
     }
     return anchors;
@@ -62,7 +67,7 @@ chains(std::vector<anchor_t>& anchors,
     int64_t i = anchors.size()-1;
     while (i >= 0) {
         anchor_t* a = &anchors[i];
-        std::cerr << a->best_predecessor << " "<< a->max_chain_score <<std::endl;
+        std::cerr << "best predecessor " << a->best_predecessor << " "<< a->max_chain_score <<std::endl;
         if (a->best_predecessor != nullptr
             && a->max_chain_score > seed_length) { //!curr_chain) {
             chains.emplace_back();
@@ -149,14 +154,15 @@ double score_anchors(const anchor_t& a,
             return -std::numeric_limits<double>::max();
             //return std::numeric_limits<double>::min();
         } else {
+            std::cerr << "query_length " << query_length << " target_length " << target_length << std::endl;
             uint64_t gap_length = std::abs((int64_t)query_length - (int64_t)target_length);
             double gap_cost = gap_length == 0 ? 0
                 : 0.01 * seed_length * gap_length + 0.5 * log2(gap_length);
             uint64_t match_length = std::min(std::min(query_length,
                                                       target_length),
                                              seed_length);
-            // wtf here?
-            return -( a.max_chain_score + match_length - gap_cost );
+            std::cerr << "chain score is " << a.max_chain_score + match_length - gap_cost << std::endl;
+            return a.max_chain_score + match_length - gap_cost;
         }
     }
 }

@@ -122,7 +122,9 @@ void gyeet_index_t::build(const HandleGraph& graph,
         [&](const kmer_t& kmer) {
             if (kmer.seq.find('N') == std::string::npos) {
                 uint64_t hash = to_key(kmer.seq.c_str(), kmer.seq.length());
+                //std::cerr << "kmer " << kmer.seq << " " << hash << std::endl;
                 if (keep_key(hash)) {
+                    //std::cerr << "recording!" << std::endl;
                     seq_pos_t begin_pos = get_seq_pos(kmer.begin.handle) + kmer.begin.pos;
                     seq_pos_t end_pos = get_seq_pos(kmer.end.handle) + kmer.end.pos;
                     kmer_pos_t p = { hash, begin_pos, end_pos };
@@ -281,7 +283,7 @@ void gyeet_index_t::load(const std::string& in_prefix) {
 
 // get a key representation of a sequence kmer
 uint64_t gyeet_index_t::to_key(const char* seq, const size_t& len) const {
-    return djb2_hash64(seq);
+    return djb2_hash64(seq, len);
 }
 
 uint64_t gyeet_index_t::to_key(const std::string& seq) const {
