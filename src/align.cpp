@@ -35,7 +35,7 @@ Col     Type    Description
 12      int     Mapping quality (0-255; 255 for missing)
 */
 
-void write_gaf_record(
+void write_chain_gaf(
     std::ostream& out,
     const chain_t& chain,
     const gyeet_index_t& index,

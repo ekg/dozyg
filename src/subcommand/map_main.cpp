@@ -74,11 +74,11 @@ int main_map(int argc, char** argv) {
                                    max_gap);
         std::string query_name = "unknown";
         for (auto& chain : query_chains) {
-            write_gaf_record(std::cout,
-                             chain,
-                             index,
-                             query_name,
-                             query.length());
+            write_chain_gaf(std::cout,
+                            chain,
+                            index,
+                            query_name,
+                            query.length());
         }
     }
 
