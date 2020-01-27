@@ -38,7 +38,29 @@ Col     Type    Description
 void write_gaf_record(
     std::ostream& out,
     const chain_t& chain,
-    const gyeet_index_t& index) {
+    const gyeet_index_t& index,
+    const std::string& query_name,
+    const uint64_t& query_length) {
+    out << query_name << "\t"
+        << query_length << "\t"
+        << chain.anchors.front()->query_begin << "\t"
+        << chain.anchors.back()->query_end << "\t"
+        << "+" << "\t";  // we're always forward strand relative to our path
+    uint64_t path_length = 0;
+    for_handle_at_anchor_begin_in_chain(
+        chain, index,
+        [&out,&index,&path_length](const handle_t& h) {
+            path_length += index.get_length(h);
+            out << (handle_is_rev(h) ? "<" : ">") << to_id(h);
+        });
+    out << "\t"
+        << path_length << "\t"
+        << 0 << "\t" // fixme
+        << path_length << "\t" // fixme
+        << path_length << "\t" // fixme
+        << path_length << "\t" // fixme
+        << std::min((int)std::round(chain.mapping_quality), 254) << std::endl;
+
 }
 
 

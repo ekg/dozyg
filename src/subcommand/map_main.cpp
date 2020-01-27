@@ -72,18 +72,13 @@ int main_map(int argc, char** argv) {
         auto query_chains = chains(anchors,
                                    kmer_length,
                                    max_gap);
+        std::string query_name = "unknown";
         for (auto& chain : query_chains) {
-            std::cout << chain.score << " "
-                      << chain.mapping_quality << " "
-                      << chain.anchors.size() << " "
-                      << chain.is_secondary
-                      << std::endl;
-            for_handle_at_anchor_begin_in_chain(
-                chain, index,
-                [](const handle_t& h) {
-                    std::cout << (handle_is_rev(h) ? "<" : ">") << to_id(h);
-                });
-            std::cout << std::endl;
+            write_gaf_record(std::cout,
+                             chain,
+                             index,
+                             query_name,
+                             query.length());
         }
     }
 
