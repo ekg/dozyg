@@ -41,6 +41,9 @@ inline nid_t to_id(const handle_t& handle) {
     return handle_rank(handle) + 1;
 }
 
+inline handle_t max_handle(void) {
+    return make_handle(std::numeric_limits<int64_t>::max(), false);
+}
 
 // seq_pos_t defines an oriented position in the sequence space of the graph
 // 

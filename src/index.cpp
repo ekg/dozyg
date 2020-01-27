@@ -355,7 +355,11 @@ seq_pos_t gyeet_index_t::get_seq_pos(const handle_t& h) const {
 handle_t gyeet_index_t::get_handle_at(const seq_pos_t& pos) const {
     bool is_rev = seq_pos::is_rev(pos);
     uint64_t offset = seq_pos::offset(pos);
-    return make_handle(seq_bv_rank(offset), is_rev);
+    if (is_rev) {
+        return make_handle(seq_bv_rank(seq_length - offset), is_rev);
+    } else {
+        return make_handle(seq_bv_rank(offset), is_rev);
+    }
 }
 
 }
