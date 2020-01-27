@@ -46,16 +46,20 @@ chains(std::vector<anchor_t>& anchors,
     // we walk from the last to first anchor
     for (int64_t i = 0; i < anchors.size(); ++i) {
         anchor_t& anchor_i = anchors[i];
+        //std::cerr << "anchor_i " << anchor_i.query_begin << ".." << anchor_i.query_end << std::endl;
         anchor_i.max_chain_score = seed_length;
         int64_t min_j = bandwidth > i ? 0 : i - bandwidth;
-        for (int64_t j = i; j >= min_j; --j) {
+        for (int64_t j = i-1; j >= min_j; --j) {
             anchor_t& anchor_j = anchors[j];
+            //std::cerr << "versus " << anchor_j.query_begin << ".." << anchor_j.query_end << std::endl;
             double proposed_score = score_anchors(anchor_j,
                                                   anchor_i,
                                                   seed_length,
                                                   max_gap);
-            //std::cerr <<"prop score " <<proposed_score <<std::endl;
+            //std::cerr << "proposed " << proposed_score << " vs " << anchor_i.max_chain_score << std::endl;
+            //std::cerr << "diff " << proposed_score - anchor_i.max_chain_score << std::endl;
             if (proposed_score > anchor_i.max_chain_score) {
+                //std::cerr << "taken!" << std::endl;
                 anchor_i.max_chain_score = proposed_score;
                 anchor_i.best_predecessor = &anchor_j;
             }
@@ -185,7 +189,8 @@ double score_anchors(const anchor_t& a,
                                                       target_length),
                                              seed_length);
             //std::cerr << "chain score is " << a.max_chain_score + match_length - gap_cost << std::endl;
-            return a.max_chain_score + match_length - gap_cost;
+            // round to 3 decimal digits, avoid problems with floating point instability causing chain truncation
+            return std::round((a.max_chain_score + match_length - gap_cost) * 1000.0) / 1000.0;
         }
     }
 }
