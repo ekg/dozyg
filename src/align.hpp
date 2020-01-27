@@ -20,4 +20,15 @@ void write_chain_gaf(
     const std::string& query_name,
     const uint64_t& query_length);
 
+/*
+struct alignment_t {
+    
+};
+*/
+void align(
+    const char* query,
+    const chain_t& chain,
+    const gyeet_index_t& index);
+
+
 }

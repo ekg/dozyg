@@ -63,5 +63,30 @@ void write_chain_gaf(
 
 }
 
+// alignment
+// assume that chains are over linearized segments of the graph
+// apply global alignment within these regions to obtain sequence to graph sequence mapping
+// use this to determine the correct graph path (and check it)
+// re-score using the graph topology
+void align(
+    const char* query,
+    const chain_t& chain,
+    const gyeet_index_t& index) {
+
+    const char* query_begin = query + seq_pos::offset(chain.anchors.front()->query_begin);
+    uint64_t query_length = chain.anchors.back()->query_end - chain.anchors.front()->query_begin;
+    const char* target_begin = index.get_target(chain.anchors.front()->target_begin);
+    uint64_t target_length = chain.anchors.back()->target_end - chain.anchors.front()->target_begin;
+    EdlibAlignResult result = edlibAlign(query_begin, query_length, target_begin, target_length,
+                                         edlibNewAlignConfig(query_length, EDLIB_MODE_HW, EDLIB_TASK_PATH, NULL, 0));
+    if (result.status == EDLIB_STATUS_OK) {
+        printf("%d\n", result.editDistance);
+    }
+    std::cerr << result.alignmentLength << std::endl;
+    char* cigar = edlibAlignmentToCigar(result.alignment, result.alignmentLength, EDLIB_CIGAR_STANDARD);
+    printf("%s\n", cigar);
+    free(cigar);
+    edlibFreeAlignResult(result);
+}
 
 }

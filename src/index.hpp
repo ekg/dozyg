@@ -159,6 +159,9 @@ public:
     bool is_reverse(const handle_t& h) const;
     seq_pos_t get_seq_pos(const handle_t& h) const;
     handle_t get_handle_at(const seq_pos_t& pos) const;
+
+    // target sequences
+    const char* get_target(const seq_pos_t& pos) const;
 };
 
 }

@@ -362,4 +362,10 @@ handle_t gyeet_index_t::get_handle_at(const seq_pos_t& pos) const {
     }
 }
 
+const char* gyeet_index_t::get_target(const seq_pos_t& pos) const {
+    return seq_pos::is_rev(pos) ?
+        &seq_rev[seq_pos::offset(pos)]
+        : &seq_fwd[seq_pos::offset(pos)];
+}
+
 }
