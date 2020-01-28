@@ -368,4 +368,8 @@ const char* gyeet_index_t::get_target(const seq_pos_t& pos) const {
         : &seq_fwd[seq_pos::offset(pos)];
 }
 
+nid_t gyeet_index_t::get_id(const handle_t& h) const {
+    return handle_rank(h) + 1;
+}
+
 }

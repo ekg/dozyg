@@ -7,7 +7,7 @@
 
 namespace gyeet {
 
-typedef std::vector<std::pair<uint64_t, char>> cigar_t;
+typedef std::vector<std::pair<uint32_t, char>> cigar_t;
 typedef std::vector<handle_t> path_t;
 
 struct alignment_t {
@@ -25,6 +25,7 @@ struct alignment_t {
     int64_t score = 0;
     path_t path;
     cigar_t cigar;
+    //std::string cigar;
 };
 
 
@@ -61,6 +62,8 @@ int64_t score_cigar(
     int64_t gap_open = 2,
     int64_t gap_extend = 1);
 std::ostream& operator<<(std::ostream& out, const cigar_t& cigar);
+void extend_cigar_string(std::string& cigar_str, const cigar_t& cigar);
+void extend_cigar(cigar_t& cigar, const cigar_t& extension);
 
 void graph_relativize(
     alignment_t& aln,

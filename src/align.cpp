@@ -166,6 +166,37 @@ std::ostream& operator<<(std::ostream& out, const cigar_t& cigar) {
     return out;
 }
 
+void extend_cigar_string(std::string& cigar_str, const cigar_t& cigar) {
+    for (auto& elem : cigar) {
+        cigar_str.append(std::to_string(elem.first) + std::to_string(elem.second));
+    }
+}
+
+/*
+std::string cigar_string(const cigar_t& cigar) {
+    std::string s;
+    for (auto& elem : cigar) {
+        s.append(std::to_string(elem.first) + std::to_string(elem.second));
+    }
+    return s;
+}
+*/
+
+void extend_cigar(cigar_t& cigar, const cigar_t& extension) {
+    if (cigar.empty()) {
+        cigar = extension;
+    } else if (extension.size()) {
+        if (cigar.back().second == extension.front().second) {
+            cigar.back().first += extension.front().first;
+        } else {
+            cigar.push_back(extension.front());
+        }
+        for (uint64_t i = 1; i < extension.size(); ++i) {
+            cigar.push_back(extension[i]);
+        }
+    }
+}
+
 int64_t score_cigar(
     const cigar_t& cigar,
     int64_t match,
@@ -218,22 +249,31 @@ void graph_relativize(
     handle_t curr = max_handle();
     cigar_t curr_cigar;
     for (uint64_t i = 0; i <= alignmentLength; i++) {
-
         // determine if we need to update our path
         handle_t next = index.get_handle_at(target_pos);
-        if (next != curr || i == alignmentLength) {
+        if (i == 0) {
+            curr = next;
+        } else if (next != curr || i == alignmentLength) {
             // are there any positional matches in the last handle cigar?
             // if so, add them to our path and cigar
             if (has_matches(curr_cigar)) {
                 aln.path.push_back(curr);
+                //extend_cigar_string(aln.cigar, curr_cigar);
+                extend_cigar(aln.cigar, curr_cigar);
+                /*
                 aln.cigar.reserve(aln.cigar.size()+curr_cigar.size());
                 aln.cigar.insert(aln.cigar.end(), curr_cigar.begin(), curr_cigar.end());
+                */
             } else {
                 // save insertions in the query that might have occurred between
                 // matches and deletions relative to the graph vector
                 uint64_t ins_len = insertion_length(curr_cigar);
                 if (ins_len) {
-                    aln.cigar.push_back(std::make_pair(ins_len, 'I'));
+                    curr_cigar.clear();
+                    curr_cigar.push_back(std::make_pair(ins_len, 'I'));
+                    extend_cigar(aln.cigar, curr_cigar);
+                    //aln.cigar.append(std::to_string(ins_len)+"I");
+                    //aln.cigar.push_back(std::make_pair(ins_len, 'I'));
                 }
             }
             curr_cigar.clear();
@@ -245,8 +285,8 @@ void graph_relativize(
 
         // extend cigar
         const uint8_t& move_code = alignment[i];
-        if (curr_cigar.empty()
-            || curr_cigar.back().second == moveCodeToChar[move_code]) {
+        if (!curr_cigar.empty()
+            && curr_cigar.back().second == moveCodeToChar[move_code]) {
             ++curr_cigar.back().first;
         } else {
             curr_cigar.push_back(std::make_pair(1, moveCodeToChar[move_code]));
