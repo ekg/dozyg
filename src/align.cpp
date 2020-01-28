@@ -126,19 +126,151 @@ alignment_t align(
     aln.target_begin = seq_pos::offset(chain.anchors.front()->target_begin);
     aln.target_end = seq_pos::offset(chain.anchors.back()->target_end);
     // TODO calculate alignment score, cigar, and path using graph
-    aln.edit_distance = result.editDistance;
-    aln.cigar = alignment_cigar(result.alignment, result.alignmentLength, false);
+    //aln.edit_distance = result.editDistance;
+    //aln.cigar = alignment_cigar(result.alignment, result.alignmentLength, false);
+    // 
+    graph_relativize(aln, chain, index, result.alignment, result.alignmentLength, false);
     edlibFreeAlignResult(result);
     return aln;
 }
 
-std::vector<handle_t> alignment_path(
+bool has_matches(const cigar_t& cigar) {
+    for (auto& elem : cigar) {
+        switch (elem.second) {
+        case 'M':
+        case '=':
+        case 'X':
+            return true;
+            break;
+        default:
+            break;
+        }
+    }
+    return false;
+}
+
+uint64_t insertion_length(const cigar_t& cigar) {
+    uint64_t ins_len = 0;
+    for (auto& elem : cigar) {
+        if (elem.second == 'I') {
+            ++ins_len;
+        }
+    }
+    return ins_len;
+}
+
+std::ostream& operator<<(std::ostream& out, const cigar_t& cigar) {
+    for (auto& elem : cigar) {
+        out << elem.first << elem.second;
+    }
+    return out;
+}
+
+int64_t score_cigar(
+    const cigar_t& cigar,
+    int64_t match,
+    int64_t mismatch,
+    int64_t gap_open,
+    int64_t gap_extend) {
+    int64_t score = 0;
+    for (auto& elem : cigar) {
+        switch (elem.second) {
+        case 'M':
+        case '=':
+            score += match * elem.first;
+            break;
+        case 'X':
+            score -= mismatch * elem.first;
+            break;
+        case 'D':
+        case 'I':
+            score -= gap_open + gap_extend * elem.first;
+            break;
+        default:
+            break;
+        }
+    }
+    return score;
+}
+
+
+void graph_relativize(
     alignment_t& aln,
+    const chain_t& chain,
     const gyeet_index_t& index,
     const unsigned char* const alignment,
-    const int alignmentLength) {
-    std::vector<handle_t> path;
-    return path;
+    const int alignmentLength,
+    const bool& extended_cigar) {
+    // Maps move code from alignment to char in cigar.
+    //                        0    1    2    3
+    char moveCodeToChar[] = {'=', 'I', 'D', 'X'};
+    if (!extended_cigar) {
+        moveCodeToChar[0] = moveCodeToChar[3] = 'M';
+    }
+    // project the alignment into the graph subset that it touches
+    // computing:
+    // implied path in graph
+    // cigar relative to this path
+    // target (in graph path) begin and end
+    // and score / edit distance
+    seq_pos_t query_pos = chain.anchors.front()->query_begin;
+    seq_pos_t target_pos = chain.anchors.front()->target_begin;
+    handle_t curr = max_handle();
+    cigar_t curr_cigar;
+    for (uint64_t i = 0; i <= alignmentLength; i++) {
+
+        // determine if we need to update our path
+        handle_t next = index.get_handle_at(target_pos);
+        if (next != curr || i == alignmentLength) {
+            // are there any positional matches in the last handle cigar?
+            // if so, add them to our path and cigar
+            if (has_matches(curr_cigar)) {
+                aln.path.push_back(curr);
+                aln.cigar.reserve(aln.cigar.size()+curr_cigar.size());
+                aln.cigar.insert(aln.cigar.end(), curr_cigar.begin(), curr_cigar.end());
+            } else {
+                // save insertions in the query that might have occurred between
+                // matches and deletions relative to the graph vector
+                uint64_t ins_len = insertion_length(curr_cigar);
+                if (ins_len) {
+                    aln.cigar.push_back(std::make_pair(ins_len, 'I'));
+                }
+            }
+            curr_cigar.clear();
+            curr = next;
+        }
+        if (i == alignmentLength) {
+            break;
+        }
+
+        // extend cigar
+        const uint8_t& move_code = alignment[i];
+        if (curr_cigar.empty()
+            || curr_cigar.back().second == moveCodeToChar[move_code]) {
+            ++curr_cigar.back().first;
+        } else {
+            curr_cigar.push_back(std::make_pair(1, moveCodeToChar[move_code]));
+        }
+
+        // update our query/target pointers
+        switch (move_code) {
+        case 0:
+        case 3:
+            ++query_pos;
+            ++target_pos;
+            break;
+        case 1:
+            ++query_pos;
+            break;
+        case 2:
+            ++target_pos;
+            break;
+        default:
+            assert(false);
+            break;
+        }
+    }
+    aln.score = score_cigar(aln.cigar);
 }
 
 std::string alignment_cigar(

@@ -7,6 +7,9 @@
 
 namespace gyeet {
 
+typedef std::vector<std::pair<uint64_t, char>> cigar_t;
+typedef std::vector<handle_t> path_t;
+
 struct alignment_t {
     std::string query_name;
     uint64_t query_length = 0;
@@ -19,9 +22,9 @@ struct alignment_t {
     bool is_secondary = false;
     double mapping_quality = 0;
     uint64_t edit_distance = 0;
-    uint64_t score = 0;
-    std::vector<handle_t> path;
-    std::string cigar;
+    int64_t score = 0;
+    path_t path;
+    cigar_t cigar;
 };
 
 
@@ -48,6 +51,24 @@ alignment_t align(
     const char* query,
     const chain_t& chain,
     const gyeet_index_t& index);
+
+bool has_matches(const cigar_t& cigar);
+uint64_t insertion_length(const cigar_t& cigar);
+int64_t score_cigar(
+    const cigar_t& cigar,
+    int64_t match = 1,
+    int64_t mismatch = 2,
+    int64_t gap_open = 2,
+    int64_t gap_extend = 1);
+std::ostream& operator<<(std::ostream& out, const cigar_t& cigar);
+
+void graph_relativize(
+    alignment_t& aln,
+    const chain_t& chain,
+    const gyeet_index_t& index,
+    const unsigned char* const alignment,
+    const int alignmentLength,
+    const bool& extended_cigar);
 
 std::vector<handle_t> alignment_path(
     alignment_t& aln,
