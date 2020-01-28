@@ -74,12 +74,23 @@ int main_map(int argc, char** argv) {
                                    max_gap);
         std::string query_name = "unknown";
         for (auto& chain : query_chains) {
-            align(query.c_str(), chain, index);
+            alignment_t aln
+                = align(
+                    query_name,
+                    query.length(),
+                    query.c_str(),
+                    chain,
+                    index);
+            write_alignment_gaf(std::cout,
+                                aln,
+                                index);
+            /*
             write_chain_gaf(std::cout,
                             chain,
                             index,
                             query_name,
                             query.length());
+            */
         }
     }
 

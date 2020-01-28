@@ -63,12 +63,42 @@ void write_chain_gaf(
 
 }
 
+void write_alignment_gaf(
+    std::ostream& out,
+    const alignment_t& aln,
+    const gyeet_index_t& index) {
+    out << aln.query_name << "\t"
+        << aln.query_length << "\t"
+        << aln.query_begin << "\t"
+        << aln.query_end << "\t"
+        << "+" << "\t";  // we're always forward strand relative to our path
+    uint64_t path_length = 0;
+    for (auto& h : aln.path) {
+        path_length += index.get_length(h);
+        out << (handle_is_rev(h) ? "<" : ">") << to_id(h);
+    }
+    out << "\t"
+        << path_length << "\t"
+        << 0 << "\t" // fixme
+        << path_length << "\t" // fixme
+        << path_length << "\t" // fixme
+        << path_length << "\t" // fixme
+        << std::min((int)std::round(aln.mapping_quality), 254) << "\t"
+        << "as:i:" << aln.score << "\t"
+        << "ta:A:" << (aln.is_secondary ? "S" : "P") << "\t"
+        << "cs:f:" << aln.chain_score << "\t"
+        << "ac:i:" << aln.anchor_count << "\t"
+        << "cg:Z:" << aln.cigar << std::endl;
+}
+
 // alignment
 // assume that chains are over linearized segments of the graph
 // apply global alignment within these regions to obtain sequence to graph sequence mapping
 // use this to determine the correct graph path (and check it)
 // re-score using the graph topology
 alignment_t align(
+    const std::string& query_name,
+    const uint64_t& query_total_length,
     const char* query,
     const chain_t& chain,
     const gyeet_index_t& index) {
@@ -79,26 +109,39 @@ alignment_t align(
     uint64_t target_length = chain.anchors.back()->target_end - chain.anchors.front()->target_begin;
     EdlibAlignResult result = edlibAlign(query_begin, query_length, target_begin, target_length,
                                          edlibNewAlignConfig(query_length, EDLIB_MODE_HW, EDLIB_TASK_PATH, NULL, 0));
-    if (result.status == EDLIB_STATUS_OK) {
-        printf("%d\n", result.editDistance);
+    alignment_t aln;
+    aln.query_name = query_name;
+    aln.query_length = query_total_length;
+    if (result.status != EDLIB_STATUS_OK) {
+        std::cerr << "[gyeet map] alignment failure" << std::endl;
+        assert(false);
+        return aln;
     }
-    std::cerr << result.alignmentLength << std::endl;
-    char* cigar = edlibAlignmentToCigar(result.alignment, result.alignmentLength, EDLIB_CIGAR_STANDARD);
-    printf("%s\n", cigar);
-    free(cigar);
+    aln.anchor_count = chain.anchors.size();
+    aln.is_secondary = chain.is_secondary;
+    aln.chain_score = chain.score;
+    aln.mapping_quality = chain.mapping_quality;
+    aln.query_begin = seq_pos::offset(chain.anchors.front()->query_begin);
+    aln.query_end = seq_pos::offset(chain.anchors.back()->query_end);
+    aln.target_begin = seq_pos::offset(chain.anchors.front()->target_begin);
+    aln.target_end = seq_pos::offset(chain.anchors.back()->target_end);
+    // TODO calculate alignment score, cigar, and path using graph
+    aln.edit_distance = result.editDistance;
+    aln.cigar = alignment_cigar(result.alignment, result.alignmentLength, false);
     edlibFreeAlignResult(result);
+    return aln;
 }
 
-void fill_alignment_path(
+std::vector<handle_t> alignment_path(
     alignment_t& aln,
     const gyeet_index_t& index,
     const unsigned char* const alignment,
     const int alignmentLength) {
-    
+    std::vector<handle_t> path;
+    return path;
 }
 
-void fill_alignment_cigar(
-    alignment_t& aln,
+std::string alignment_cigar(
     const unsigned char* const alignment,
     const int alignmentLength,
     const bool& extended_cigar) {
@@ -108,7 +151,7 @@ void fill_alignment_cigar(
     if (!extended_cigar) {
         moveCodeToChar[0] = moveCodeToChar[3] = 'M';
     }
-    vector<char>* cigar = new vector<char>();
+    std::vector<char>* cigar = new std::vector<char>();
     char lastMove = 0;  // Char of last move. 0 if there was no previous move.
     int numOfSameMoves = 0;
     for (int i = 0; i <= alignmentLength; i++) {
@@ -140,8 +183,11 @@ void fill_alignment_cigar(
         }
     }
     cigar->push_back(0);  // Null character termination.
-    aln.cigar = string(cigar); // save in our alignment
+    // this copy should be optimized away via NRVO
+    // but it might be even better to add things directly onto this string
+    std::string s = std::string((const char*)&cigar->at(0));
     delete cigar;
+    return s;
 }
 
 
