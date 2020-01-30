@@ -84,13 +84,11 @@ int main_map(int argc, char** argv) {
             write_alignment_gaf(std::cout,
                                 aln,
                                 index);
-            /*
             write_chain_gaf(std::cout,
                             chain,
                             index,
                             query_name,
                             query.length());
-            */
         }
     }
 

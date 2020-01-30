@@ -44,7 +44,7 @@ void gyeet_index_t::build(const HandleGraph& graph,
         });
 
     // mark our node starts in fwd
-    seq_bv.resize(seq_length);
+    seq_bv = sdsl::bit_vector(seq_length+1); // allocates to 0
 
     // follow forward and reverse edges
     std::string seq_fwd_filename = out_prefix + ".sqf";
@@ -85,7 +85,8 @@ void gyeet_index_t::build(const HandleGraph& graph,
         node_ref_t ref = { seq_idx, ref_idx, 0 };
         node_ref_f.write(reinterpret_cast<char const*>(&ref), sizeof(ref));
     }
-
+    assert(seq_idx == seq_length);
+    seq_bv[seq_idx] = 1; // end marker
     // save our rank structure and bitvector
     sdsl::util::assign(seq_bv_rank, sdsl::bit_vector::rank_1_type(&seq_bv));
     std::string seq_bv_filename = out_prefix + ".sbv";
@@ -355,10 +356,11 @@ seq_pos_t gyeet_index_t::get_seq_pos(const handle_t& h) const {
 handle_t gyeet_index_t::get_handle_at(const seq_pos_t& pos) const {
     bool is_rev = seq_pos::is_rev(pos);
     uint64_t offset = seq_pos::offset(pos);
+    // the forward/reverse conversion is somewhat tricky because rank(N) yields the number of set bits in [0..N)
     if (is_rev) {
-        return make_handle(seq_bv_rank(seq_length - offset), is_rev);
+        return make_handle(seq_bv_rank(seq_length - offset) - 1, is_rev);
     } else {
-        return make_handle(seq_bv_rank(offset), is_rev);
+        return make_handle(seq_bv_rank(offset + 1) - 1, is_rev);
     }
 }
 

@@ -108,7 +108,8 @@ alignment_t align(
     const char* target_begin = index.get_target(chain.anchors.front()->target_begin);
     uint64_t target_length = chain.anchors.back()->target_end - chain.anchors.front()->target_begin;
     EdlibAlignResult result = edlibAlign(query_begin, query_length, target_begin, target_length,
-                                         edlibNewAlignConfig(query_length, EDLIB_MODE_HW, EDLIB_TASK_PATH, NULL, 0));
+                                         edlibNewAlignConfig(query_length, EDLIB_MODE_NW, EDLIB_TASK_PATH, NULL, 0));
+    
     alignment_t aln;
     aln.query_name = query_name;
     aln.query_length = query_total_length;
@@ -129,7 +130,7 @@ alignment_t align(
     //aln.edit_distance = result.editDistance;
     //aln.cigar = alignment_cigar(result.alignment, result.alignmentLength, false);
     // 
-    graph_relativize(aln, chain, index, result.alignment, result.alignmentLength, false);
+    graph_relativize(aln, chain, index, result.alignment, result.alignmentLength, true);
     edlibFreeAlignResult(result);
     return aln;
 }
@@ -231,7 +232,8 @@ void graph_relativize(
     const gyeet_index_t& index,
     const unsigned char* const alignment,
     const int alignmentLength,
-    const bool& extended_cigar) {
+    const bool extended_cigar) {
+    std::string alignment_cigar;
     // Maps move code from alignment to char in cigar.
     //                        0    1    2    3
     char moveCodeToChar[] = {'=', 'I', 'D', 'X'};
@@ -244,26 +246,15 @@ void graph_relativize(
     // cigar relative to this path
     // target (in graph path) begin and end
     // and score / edit distance
-    seq_pos_t query_pos = chain.anchors.front()->query_begin;
-    seq_pos_t target_pos = chain.anchors.front()->target_begin;
-    handle_t curr = max_handle();
-    cigar_t curr_cigar;
-    for (uint64_t i = 0; i <= alignmentLength; i++) {
-        // determine if we need to update our path
-        handle_t next = index.get_handle_at(target_pos);
-        if (i == 0) {
-            curr = next;
-        } else if (next != curr || i == alignmentLength) {
+
+    auto record =
+        [&aln](const handle_t& curr,
+               cigar_t& curr_cigar) {
             // are there any positional matches in the last handle cigar?
             // if so, add them to our path and cigar
             if (has_matches(curr_cigar)) {
                 aln.path.push_back(curr);
-                //extend_cigar_string(aln.cigar, curr_cigar);
                 extend_cigar(aln.cigar, curr_cigar);
-                /*
-                aln.cigar.reserve(aln.cigar.size()+curr_cigar.size());
-                aln.cigar.insert(aln.cigar.end(), curr_cigar.begin(), curr_cigar.end());
-                */
             } else {
                 // save insertions in the query that might have occurred between
                 // matches and deletions relative to the graph vector
@@ -272,10 +263,20 @@ void graph_relativize(
                     curr_cigar.clear();
                     curr_cigar.push_back(std::make_pair(ins_len, 'I'));
                     extend_cigar(aln.cigar, curr_cigar);
-                    //aln.cigar.append(std::to_string(ins_len)+"I");
-                    //aln.cigar.push_back(std::make_pair(ins_len, 'I'));
                 }
             }
+        };
+    seq_pos_t query_pos = chain.anchors.front()->query_begin;
+    seq_pos_t target_pos = chain.anchors.front()->target_begin;
+    handle_t curr = max_handle();
+    cigar_t curr_cigar;
+    for (uint64_t i = 0; i < alignmentLength; i++) {
+        // determine if we need to update our path
+        handle_t next = index.get_handle_at(target_pos);
+        if (i == 0) {
+            curr = next;
+        } else if (next != curr) {
+            record(curr, curr_cigar);
             curr_cigar.clear();
             curr = next;
         }
@@ -310,13 +311,15 @@ void graph_relativize(
             break;
         }
     }
+    // last step
+    record(curr, curr_cigar);
     aln.score = score_cigar(aln.cigar);
 }
 
 std::string alignment_cigar(
     const unsigned char* const alignment,
     const int alignmentLength,
-    const bool& extended_cigar) {
+    const bool extended_cigar) {
     // Maps move code from alignment to char in cigar.
     //                        0    1    2    3
     char moveCodeToChar[] = {'=', 'I', 'D', 'X'};

@@ -71,7 +71,7 @@ void graph_relativize(
     const gyeet_index_t& index,
     const unsigned char* const alignment,
     const int alignmentLength,
-    const bool& extended_cigar);
+    const bool extended_cigar);
 
 std::vector<handle_t> alignment_path(
     alignment_t& aln,
@@ -82,6 +82,6 @@ std::vector<handle_t> alignment_path(
 std::string alignment_cigar(
     const unsigned char* const alignment,
     const int alignmentLength,
-    const bool& extended_cigar);
+    const bool extended_cigar);
 
 }

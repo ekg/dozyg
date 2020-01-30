@@ -65,7 +65,7 @@ chains(std::vector<anchor_t>& anchors,
             }
         }
     }
-    /*
+
     std::ofstream out("chains.dot");
     out << "digraph G {" << std::endl;
     for (auto& anchor : anchors) {
@@ -79,7 +79,7 @@ chains(std::vector<anchor_t>& anchors,
     }
     out << "}" << std::endl;
     out.close();
-    */
+
     // collect chains
     std::vector<chain_t> chains;
     int64_t i = anchors.size()-1;
