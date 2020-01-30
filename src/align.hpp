@@ -51,7 +51,8 @@ alignment_t align(
     const uint64_t& query_total_length,
     const char* query,
     const chain_t& chain,
-    const gyeet_index_t& index);
+    const gyeet_index_t& index,
+    const uint64_t extra_bp);
 
 bool has_matches(const cigar_t& cigar);
 uint64_t insertion_length(const cigar_t& cigar);
@@ -67,7 +68,8 @@ void extend_cigar(cigar_t& cigar, const cigar_t& extension);
 
 void graph_relativize(
     alignment_t& aln,
-    const chain_t& chain,
+    seq_pos_t query_pos,
+    seq_pos_t target_pos,
     const gyeet_index_t& index,
     const unsigned char* const alignment,
     const int alignmentLength,

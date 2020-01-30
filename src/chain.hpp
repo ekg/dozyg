@@ -41,6 +41,13 @@ struct chain_t {
     }
 };
 
+struct chain_node_t {
+    chain_t* chain = nullptr;
+    chain_node_t* best_predecessor = nullptr;
+    double max_superchain_score = 0;
+    chain_node_t(chain_t* c) : chain(c) { }
+};
+
 std::vector<chain_t>
 chains(std::vector<anchor_t>& anchors,
        const uint64_t& seed_length,
@@ -53,5 +60,24 @@ double score_anchors(const anchor_t& a,
                      const anchor_t& b,
                      const uint64_t& seed_length,
                      const uint64_t& max_gap);
+
+struct superchain_t {
+    std::vector<chain_t*> chains;
+    double score = 0;
+    /*
+    double mapping_quality = std::numeric_limits<double>::min();
+    //bool is_secondary = false;
+    bool processed(void) {
+        return mapping_quality != std::numeric_limits<double>::min();
+    }
+    */
+};
+
+std::vector<superchain_t>
+superchains(std::vector<chain_t>& chains,
+            const uint64_t bandwidth = 50);
+
+double score_chain_nodes(const chain_node_t& a,
+                         const chain_node_t& b);
 
 }

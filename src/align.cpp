@@ -101,12 +101,16 @@ alignment_t align(
     const uint64_t& query_total_length,
     const char* query,
     const chain_t& chain,
-    const gyeet_index_t& index) {
+    const gyeet_index_t& index,
+    const uint64_t extra_bp) {
 
-    const char* query_begin = query + seq_pos::offset(chain.anchors.front()->query_begin);
-    uint64_t query_length = chain.anchors.back()->query_end - chain.anchors.front()->query_begin;
-    const char* target_begin = index.get_target(chain.anchors.front()->target_begin);
-    uint64_t target_length = chain.anchors.back()->target_end - chain.anchors.front()->target_begin;
+    seq_pos_t query_pos = chain.anchors.front()->query_begin;
+    seq_pos_t target_pos = std::min(chain.anchors.front()->target_begin,
+                                    chain.anchors.front()->target_end);
+    const char* query_begin = query + seq_pos::offset(query_pos);
+    uint64_t query_length = chain.anchors.back()->query_end - query_pos;
+    const char* target_begin = index.get_target(target_pos);
+    uint64_t target_length = chain.anchors.back()->target_end - target_pos;
     EdlibAlignResult result = edlibAlign(query_begin, query_length, target_begin, target_length,
                                          edlibNewAlignConfig(query_length, EDLIB_MODE_NW, EDLIB_TASK_PATH, NULL, 0));
     
@@ -130,7 +134,7 @@ alignment_t align(
     //aln.edit_distance = result.editDistance;
     //aln.cigar = alignment_cigar(result.alignment, result.alignmentLength, false);
     // 
-    graph_relativize(aln, chain, index, result.alignment, result.alignmentLength, true);
+    graph_relativize(aln, query_pos, target_pos, index, result.alignment, result.alignmentLength, true);
     edlibFreeAlignResult(result);
     return aln;
 }
@@ -228,7 +232,8 @@ int64_t score_cigar(
 
 void graph_relativize(
     alignment_t& aln,
-    const chain_t& chain,
+    seq_pos_t query_pos,
+    seq_pos_t target_pos,
     const gyeet_index_t& index,
     const unsigned char* const alignment,
     const int alignmentLength,
@@ -266,8 +271,8 @@ void graph_relativize(
                 }
             }
         };
-    seq_pos_t query_pos = chain.anchors.front()->query_begin;
-    seq_pos_t target_pos = chain.anchors.front()->target_begin;
+    //seq_pos_t query_pos = chain.anchors.front()->query_begin;
+    //seq_pos_t target_pos = chain.anchors.front()->target_begin;
     handle_t curr = max_handle();
     cigar_t curr_cigar;
     for (uint64_t i = 0; i < alignmentLength; i++) {

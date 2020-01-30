@@ -197,4 +197,95 @@ double score_anchors(const anchor_t& a,
     }
 }
 
+std::vector<superchain_t>
+superchains(std::vector<chain_t>& chains,
+            const uint64_t bandwidth) {
+    // sort the chains by end coordinate in the query
+    // score each with the previous N
+    std::vector<chain_node_t> chain_nodes; chain_nodes.reserve(chains.size());
+    // collect primary chains
+    for (auto& chain : chains) {
+        if (!chain.is_secondary) {
+            chain_nodes.emplace_back(&chain);
+        }
+    }
+    // sort by end in query
+    std::sort(chain_nodes.begin(), chain_nodes.end(),
+              [](const chain_node_t& a,
+                 const chain_node_t& b) {
+                  return a.chain->anchors.back()->query_end
+                      < b.chain->anchors.back()->query_end;
+              });
+    // dynamic programming
+    for (int64_t i = 0; i < chain_nodes.size(); ++i) {
+        chain_node_t& chain_node_i = chain_nodes[i];
+        //std::cerr << "anchor_i " << anchor_i.query_begin << ".." << anchor_i.query_end << std::endl;
+        chain_node_i.max_superchain_score = chain_node_i.chain->score;
+        int64_t min_j = bandwidth > i ? 0 : i - bandwidth;
+        for (int64_t j = i-1; j >= min_j; --j) {
+            chain_node_t& chain_node_j = chain_nodes[j];
+            //anchor_t& anchor_j = anchors[j];
+            //std::cerr << "anchor_j " << anchor_j.query_begin << ".." << anchor_j.query_end << std::endl;
+            double proposed_score = score_chain_nodes(chain_node_j, chain_node_i);
+            //std::cerr << "proposed " << proposed_score << " vs " << anchor_i.max_chain_score << std::endl;
+            //std::cerr << "diff " << proposed_score - anchor_i.max_chain_score << std::endl;
+            if (proposed_score > chain_node_i.max_superchain_score) {
+                //std::cerr << "taken!" << std::endl;
+                chain_node_i.max_superchain_score = proposed_score;
+                chain_node_i.best_predecessor = &chain_node_j;
+            }
+        }
+    }
+    // collect superchains
+    std::vector<superchain_t> superchains;
+    int64_t i = chain_nodes.size()-1;
+    while (i >= 0) {
+        chain_node_t* a = &chain_nodes[i];
+        //std::cerr << "best predecessor " << a->best_predecessor << " "<< a->max_chain_score <<std::endl;
+        if (a->best_predecessor != nullptr
+            && a->max_superchain_score) { // HMMMM
+            std::cerr << "adding superchain" << std::endl;
+            superchains.emplace_back();
+            auto& curr_superchain = superchains.back();
+            curr_superchain.chains.push_back(a->chain);
+            curr_superchain.score = a->max_superchain_score;
+            do {
+                chain_node_t* b = a->best_predecessor;
+                curr_superchain.chains.push_back(b->chain);
+                a->best_predecessor = nullptr; // mark done
+                a = b; // swap
+            } while (a->best_predecessor != nullptr);
+            // investigate if a deque would be faster
+            std::reverse(curr_superchain.chains.begin(),
+                         curr_superchain.chains.end());
+        }
+        --i;
+    }
+    if (superchains.empty() && chain_nodes.size() == 1) {
+        superchains.emplace_back();
+        superchains.back().chains.push_back(chain_nodes.front().chain);
+        superchains.back().score = chain_nodes.front().chain->score;
+    }
+    //std::cerr << "chain count " <<chains.size() <<std::endl;
+    // sort the superchains by score, descending
+    std::sort(superchains.begin(), superchains.end(),
+              [](const superchain_t& a,
+                 const superchain_t& b) {
+                  return a.score > b.score;
+              });
+    return superchains;
+}
+
+double score_chain_nodes(const chain_node_t& a,
+                         const chain_node_t& b) {
+    // do we overlap? --> 0
+    if (a.chain->anchors.back()->query_end
+        > b.chain->anchors.front()->query_begin) {
+        return 0;
+    } else {
+        // otherwise, add scores
+        return a.max_superchain_score + b.chain->score;
+    }
+}
+
 }
