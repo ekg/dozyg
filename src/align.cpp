@@ -107,13 +107,14 @@ alignment_t align(
     seq_pos_t query_pos = chain.anchors.front()->query_begin;
     seq_pos_t target_pos = std::min(chain.anchors.front()->target_begin,
                                     chain.anchors.front()->target_end);
+    //std::cerr << seq_pos::offset(target_pos) << std::endl;
     const char* query_begin = query + seq_pos::offset(query_pos);
     uint64_t query_length = chain.anchors.back()->query_end - query_pos;
     const char* target_begin = index.get_target(target_pos);
     uint64_t target_length = chain.anchors.back()->target_end - target_pos;
     EdlibAlignResult result = edlibAlign(query_begin, query_length, target_begin, target_length,
                                          edlibNewAlignConfig(query_length, EDLIB_MODE_NW, EDLIB_TASK_PATH, NULL, 0));
-    
+
     alignment_t aln;
     aln.query_name = query_name;
     aln.query_length = query_total_length;
@@ -133,6 +134,10 @@ alignment_t align(
     // TODO calculate alignment score, cigar, and path using graph
     //aln.edit_distance = result.editDistance;
     //aln.cigar = alignment_cigar(result.alignment, result.alignmentLength, false);
+    //std::cerr << "alignment cigar " << alignment_cigar(result.alignment, result.alignmentLength, true) << std::endl;
+    //char* cig =  edlibAlignmentToCigar(result.alignment, result.alignmentLength, EDLIB_CIGAR_EXTENDED);
+    //std::cerr << "from edlib " << cig << std::endl;
+    //free(cig);
     // 
     graph_relativize(aln, query_pos, target_pos, index, result.alignment, result.alignmentLength, true);
     edlibFreeAlignResult(result);
