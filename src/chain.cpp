@@ -51,7 +51,7 @@ chains(std::vector<anchor_t>& anchors,
         int64_t min_j = bandwidth > i ? 0 : i - bandwidth;
         for (int64_t j = i-1; j >= min_j; --j) {
             anchor_t& anchor_j = anchors[j];
-            //std::cerr << "versus " << anchor_j.query_begin << ".." << anchor_j.query_end << std::endl;
+            //std::cerr << "anchor_j " << anchor_j.query_begin << ".." << anchor_j.query_end << std::endl;
             double proposed_score = score_anchors(anchor_j,
                                                   anchor_i,
                                                   seed_length,
@@ -173,8 +173,12 @@ double score_anchors(const anchor_t& a,
     if (a.query_end >= b.query_end) {
         return -std::numeric_limits<double>::max();
     } else {
-        uint64_t query_length = b.query_end - a.query_end;
-        uint64_t target_length = b.target_end - a.target_end;
+        uint64_t query_length = std::min(b.query_begin - a.query_begin,
+                                         b.query_end - a.query_end);
+        uint64_t query_overlap = (a.query_end > b.query_begin ? a.query_end - b.query_begin : 0);
+        uint64_t target_length = std::min(b.target_begin - a.target_begin,
+                                          b.target_end - a.target_end);
+        //std::cerr << "query_length " << query_length << " target_length " << target_length << std::endl;
         if (std::max(query_length, target_length) > max_gap) {
             return -std::numeric_limits<double>::max();
             //return std::numeric_limits<double>::min();
@@ -188,7 +192,7 @@ double score_anchors(const anchor_t& a,
                                              seed_length);
             //std::cerr << "chain score is " << a.max_chain_score + match_length - gap_cost << std::endl;
             // round to 3 decimal digits, avoid problems with floating point instability causing chain truncation
-            return std::round((a.max_chain_score + match_length - gap_cost) * 1000.0) / 1000.0;
+            return std::round((a.max_chain_score + match_length - gap_cost) * 1000.0) / 1000.0 + query_overlap;
         }
     }
 }
