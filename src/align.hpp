@@ -82,6 +82,8 @@ void graph_relativize(
     const int alignmentLength,
     const bool extended_cigar);
 
+uint64_t edit_distance_estimate(const chain_t& chain, const double& max_mismatch_rate);
+
 alignment_t superalign(
     const std::string& query_name,
     const uint64_t& query_total_length,
@@ -89,7 +91,7 @@ alignment_t superalign(
     const superchain_t& superchain,
     const gyeet_index_t& index,
     const uint64_t& extra_bp,
-    const uint64_t& max_edit_distance);
+    const double& max_mismatch_rate);
 
 std::string alignment_cigar(
     const unsigned char* const alignment,

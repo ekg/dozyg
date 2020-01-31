@@ -351,6 +351,16 @@ void graph_relativize(
     }
 }
 
+uint64_t edit_distance_estimate(const chain_t& chain, const double& max_mismatch_rate) {
+    if (chain.anchors.empty()) {
+        return 0;
+    } else {
+        int64_t query_length = chain.anchors.back()->query_end - chain.anchors.front()->query_end;
+        int64_t target_length = chain.anchors.back()->target_end - chain.anchors.front()->target_end;
+        return std::abs(query_length - target_length) + std::ceil(query_length * max_mismatch_rate);
+    }
+}
+
 alignment_t superalign(
     const std::string& query_name,
     const uint64_t& query_total_length,
@@ -358,7 +368,7 @@ alignment_t superalign(
     const superchain_t& superchain,
     const gyeet_index_t& index,
     const uint64_t& extra_bp,
-    const uint64_t& max_edit_distance) {
+    const double& max_mismatch_rate) {
 
     alignment_t superaln;
     superaln.query_name = query_name;
@@ -380,7 +390,6 @@ alignment_t superalign(
         } else if (query_gap > 0) {
             extend_cigar(superaln.cigar, query_gap, 'I');
         }
-        // look at deltas to compute our edit distance max
         alignment_t aln
             = align(
                 query_name,
@@ -389,7 +398,7 @@ alignment_t superalign(
                 *chain,
                 index,
                 index.kmer_length,
-                max_edit_distance);
+                edit_distance_estimate(*chain, max_mismatch_rate));
         // extend the superalignment
         // add deletions for distance to the target start
         if (aln.first_handle_from_begin > 0) {
