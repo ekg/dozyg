@@ -75,24 +75,15 @@ int main_map(int argc, char** argv) {
         auto query_superchains = superchains(query_chains);
         std::string query_name = "unknown";
         for (auto& superchain : query_superchains) {
-            for (auto& chain : superchain.chains) {
-                alignment_t aln
-                    = align(
-                        query_name,
-                        query.length(),
-                        query.c_str(),
-                        *chain,
-                        index,
-                        kmer_length);
-                write_alignment_gaf(std::cout,
-                                    aln,
-                                    index);
-                write_chain_gaf(std::cout,
-                                *chain,
-                                index,
-                                query_name,
-                                query.length());
-            }
+            alignment_t aln = superalign(
+                query_name,
+                query.length(),
+                query.c_str(),
+                superchain,
+                index,
+                index.kmer_length,
+                query.length());
+            write_alignment_gaf(std::cout, aln, index);
         }
     }
 

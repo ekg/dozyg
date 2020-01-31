@@ -102,18 +102,23 @@ alignment_t align(
     const char* query,
     const chain_t& chain,
     const gyeet_index_t& index,
-    const uint64_t extra_bp) {
+    const uint64_t& extra_bp,
+    const uint64_t& max_edit_distance) {
 
     seq_pos_t query_pos = chain.anchors.front()->query_begin;
     seq_pos_t target_pos = std::min(chain.anchors.front()->target_begin,
                                     chain.anchors.front()->target_end);
+    if (seq_pos::offset(target_pos) >= extra_bp) {
+        target_pos -= extra_bp;
+    }
     //std::cerr << seq_pos::offset(target_pos) << std::endl;
     const char* query_begin = query + seq_pos::offset(query_pos);
     uint64_t query_length = chain.anchors.back()->query_end - query_pos;
     const char* target_begin = index.get_target(target_pos);
     uint64_t target_length = chain.anchors.back()->target_end - target_pos;
+
     EdlibAlignResult result = edlibAlign(query_begin, query_length, target_begin, target_length,
-                                         edlibNewAlignConfig(query_length, EDLIB_MODE_NW, EDLIB_TASK_PATH, NULL, 0));
+                                         edlibNewAlignConfig(max_edit_distance, EDLIB_MODE_NW, EDLIB_TASK_PATH, NULL, 0));
 
     alignment_t aln;
     aln.query_name = query_name;
@@ -123,24 +128,21 @@ alignment_t align(
         assert(false);
         return aln;
     }
+
+    graph_relativize(aln, query_pos, target_pos, index, result.alignment, result.alignmentLength, true);
+    edlibFreeAlignResult(result);
+
     aln.anchor_count = chain.anchors.size();
     aln.is_secondary = chain.is_secondary;
     aln.chain_score = chain.score;
     aln.mapping_quality = chain.mapping_quality;
-    aln.query_begin = seq_pos::offset(chain.anchors.front()->query_begin);
+    // these are fine
+    aln.query_begin = seq_pos::offset(query_pos);
     aln.query_end = seq_pos::offset(chain.anchors.back()->query_end);
-    aln.target_begin = seq_pos::offset(chain.anchors.front()->target_begin);
-    aln.target_end = seq_pos::offset(chain.anchors.back()->target_end);
-    // TODO calculate alignment score, cigar, and path using graph
-    //aln.edit_distance = result.editDistance;
-    //aln.cigar = alignment_cigar(result.alignment, result.alignmentLength, false);
-    //std::cerr << "alignment cigar " << alignment_cigar(result.alignment, result.alignmentLength, true) << std::endl;
-    //char* cig =  edlibAlignmentToCigar(result.alignment, result.alignmentLength, EDLIB_CIGAR_EXTENDED);
-    //std::cerr << "from edlib " << cig << std::endl;
-    //free(cig);
-    // 
-    graph_relativize(aln, query_pos, target_pos, index, result.alignment, result.alignmentLength, true);
-    edlibFreeAlignResult(result);
+    // change to offsets on the path we've given
+    //aln.target_begin = seq_pos::offset(target_pos);
+    //aln.target_end = seq_pos::offset(chain.anchors.back()->target_end);
+
     return aln;
 }
 
@@ -207,6 +209,18 @@ void extend_cigar(cigar_t& cigar, const cigar_t& extension) {
     }
 }
 
+void extend_cigar(cigar_t& cigar, const uint32_t& len, const char& type) {
+    if (cigar.empty()) {
+        cigar.push_back(std::make_pair(len, type));
+    } else {
+        if (cigar.back().second == type) {
+            cigar.back().first += len;
+        } else {
+            cigar.push_back(std::make_pair(len, type));
+        }
+    }
+}
+
 int64_t score_cigar(
     const cigar_t& cigar,
     int64_t match,
@@ -256,6 +270,8 @@ void graph_relativize(
     // cigar relative to this path
     // target (in graph path) begin and end
     // and score / edit distance
+    seq_pos_t target_first_match = 0;
+    seq_pos_t target_last_match = 0;
 
     auto record =
         [&aln](const handle_t& curr,
@@ -307,7 +323,11 @@ void graph_relativize(
         switch (move_code) {
         case 0:
         case 3:
+            if (target_first_match == 0) {
+                target_first_match = target_pos;
+            }
             ++query_pos;
+            target_last_match = target_pos;
             ++target_pos;
             break;
         case 1:
@@ -324,6 +344,72 @@ void graph_relativize(
     // last step
     record(curr, curr_cigar);
     aln.score = score_cigar(aln.cigar);
+    // record our start and end on the first and last handles
+    if (!aln.path.empty()) {
+        aln.first_handle_from_begin = target_first_match - index.get_seq_pos(aln.path.front());
+        aln.last_handle_to_end = index.get_seq_pos(aln.path.back()) + index.get_length(aln.path.back()) - target_last_match - 1;
+    }
+}
+
+alignment_t superalign(
+    const std::string& query_name,
+    const uint64_t& query_total_length,
+    const char* query,
+    const superchain_t& superchain,
+    const gyeet_index_t& index,
+    const uint64_t& extra_bp,
+    const uint64_t& max_edit_distance) {
+
+    alignment_t superaln;
+    superaln.query_name = query_name;
+    superaln.query_length = query_total_length;
+    superaln.query_begin = (superchain.chains.size() ? seq_pos::offset(superchain.chains.front()->anchors.front()->query_begin) : 0);
+    superaln.query_end = (superchain.chains.size() ? seq_pos::offset(superchain.chains.back()->anchors.back()->query_end) : 0);
+    superaln.mapping_quality = std::numeric_limits<double>::max();
+    for (uint64_t i = 0; i < superchain.chains.size(); ++i) {
+        auto& chain = superchain.chains[i];
+        // what's the gap from the last chain on the query?
+        int64_t query_gap = (i > 0 ?
+                             chain->anchors.front()->query_begin - superchain.chains[i-1]->anchors.front()->query_end
+                             : chain->anchors.front()->query_begin);
+        // tack on an insertion for unaligned intervening sequence
+        if (query_gap < 0) {
+            std::cerr << "[gyeet map] superchains overlap in query" << std::endl;
+            assert(false);
+            exit(1);
+        } else if (query_gap > 0) {
+            extend_cigar(superaln.cigar, query_gap, 'I');
+        }
+        // look at deltas to compute our edit distance max
+        alignment_t aln
+            = align(
+                query_name,
+                query_total_length,
+                query,
+                *chain,
+                index,
+                index.kmer_length,
+                max_edit_distance);
+        // extend the superalignment
+        // add deletions for distance to the target start
+        if (aln.first_handle_from_begin > 0) {
+            extend_cigar(superaln.cigar, aln.first_handle_from_begin, 'D');
+        }
+        // add the superalignment cigar
+        extend_cigar(superaln.cigar, aln.cigar);
+        //if (index.get_seq_pos(aln.path.back())
+        if (aln.last_handle_to_end > 0) {
+            extend_cigar(superaln.cigar, aln.last_handle_to_end, 'D');
+        }
+        // and path
+        superaln.path.reserve(superaln.path.size() + aln.path.size());
+        superaln.path.insert(superaln.path.end(), aln.path.begin(), aln.path.end());
+        // and add to the score
+        superaln.mapping_quality = std::min(superaln.mapping_quality, aln.mapping_quality); // hmm
+        superaln.score += aln.score;
+    }
+
+    return superaln;
 }
 
 std::string alignment_cigar(

@@ -227,8 +227,8 @@ superchains(std::vector<chain_t>& chains,
             //anchor_t& anchor_j = anchors[j];
             //std::cerr << "anchor_j " << anchor_j.query_begin << ".." << anchor_j.query_end << std::endl;
             double proposed_score = score_chain_nodes(chain_node_j, chain_node_i);
-            //std::cerr << "proposed " << proposed_score << " vs " << anchor_i.max_chain_score << std::endl;
-            //std::cerr << "diff " << proposed_score - anchor_i.max_chain_score << std::endl;
+            //std::cerr << "proposed " << proposed_score << " vs " << chain_node_i.max_superchain_score << std::endl;
+            //std::cerr << "diff " << proposed_score - chain_node_i.max_superchain_score << std::endl;
             if (proposed_score > chain_node_i.max_superchain_score) {
                 //std::cerr << "taken!" << std::endl;
                 chain_node_i.max_superchain_score = proposed_score;
@@ -244,14 +244,16 @@ superchains(std::vector<chain_t>& chains,
         //std::cerr << "best predecessor " << a->best_predecessor << " "<< a->max_chain_score <<std::endl;
         if (a->best_predecessor != nullptr
             && a->max_superchain_score) { // HMMMM
-            std::cerr << "adding superchain" << std::endl;
+            //std::cerr << "adding superchain" << std::endl;
             superchains.emplace_back();
             auto& curr_superchain = superchains.back();
             curr_superchain.chains.push_back(a->chain);
+            a->used = true;
             curr_superchain.score = a->max_superchain_score;
             do {
                 chain_node_t* b = a->best_predecessor;
                 curr_superchain.chains.push_back(b->chain);
+                b->used = true;
                 a->best_predecessor = nullptr; // mark done
                 a = b; // swap
             } while (a->best_predecessor != nullptr);
@@ -261,12 +263,16 @@ superchains(std::vector<chain_t>& chains,
         }
         --i;
     }
-    if (superchains.empty() && chain_nodes.size() == 1) {
-        superchains.emplace_back();
-        superchains.back().chains.push_back(chain_nodes.front().chain);
-        superchains.back().score = chain_nodes.front().chain->score;
+    // add back in all chains that aren't part of a superchain
+    for (auto& chain_node : chain_nodes) {
+        if (!chain_node.used) {
+            superchains.emplace_back();
+            superchains.back().chains.push_back(chain_node.chain);
+            superchains.back().score = chain_node.chain->score;
+        }
     }
     //std::cerr << "chain count " <<chains.size() <<std::endl;
+    //std::cerr << "superchain count " <<superchains.size() <<std::endl;
     // sort the superchains by score, descending
     std::sort(superchains.begin(), superchains.end(),
               [](const superchain_t& a,

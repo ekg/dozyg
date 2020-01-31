@@ -45,6 +45,7 @@ struct chain_node_t {
     chain_t* chain = nullptr;
     chain_node_t* best_predecessor = nullptr;
     double max_superchain_score = 0;
+    bool used = false;
     chain_node_t(chain_t* c) : chain(c) { }
 };
 
