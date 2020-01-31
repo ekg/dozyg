@@ -65,6 +65,7 @@ double score_anchors(const anchor_t& a,
 struct superchain_t {
     std::vector<chain_t*> chains;
     double score = 0;
+    bool is_secondary = true;
     /*
     double mapping_quality = std::numeric_limits<double>::min();
     //bool is_secondary = false;

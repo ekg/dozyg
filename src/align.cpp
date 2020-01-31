@@ -376,6 +376,7 @@ alignment_t superalign(
     superaln.query_begin = (superchain.chains.size() ? seq_pos::offset(superchain.chains.front()->anchors.front()->query_begin) : 0);
     superaln.query_end = (superchain.chains.size() ? seq_pos::offset(superchain.chains.back()->anchors.back()->query_end) : 0);
     superaln.mapping_quality = std::numeric_limits<double>::max();
+    superaln.is_secondary = superchain.is_secondary;
     for (uint64_t i = 0; i < superchain.chains.size(); ++i) {
         auto& chain = superchain.chains[i];
         // what's the gap from the last chain on the query?

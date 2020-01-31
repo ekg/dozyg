@@ -247,12 +247,14 @@ superchains(std::vector<chain_t>& chains,
             //std::cerr << "adding superchain" << std::endl;
             superchains.emplace_back();
             auto& curr_superchain = superchains.back();
+            curr_superchain.is_secondary = curr_superchain.is_secondary && a->chain->is_secondary;
             curr_superchain.chains.push_back(a->chain);
             a->used = true;
             curr_superchain.score = a->max_superchain_score;
             do {
                 chain_node_t* b = a->best_predecessor;
                 curr_superchain.chains.push_back(b->chain);
+                curr_superchain.is_secondary = curr_superchain.is_secondary && b->chain->is_secondary;
                 b->used = true;
                 a->best_predecessor = nullptr; // mark done
                 a = b; // swap
@@ -267,8 +269,10 @@ superchains(std::vector<chain_t>& chains,
     for (auto& chain_node : chain_nodes) {
         if (!chain_node.used) {
             superchains.emplace_back();
-            superchains.back().chains.push_back(chain_node.chain);
-            superchains.back().score = chain_node.chain->score;
+            auto& superchain = superchains.back();
+            superchain.is_secondary = chain_node.chain->is_secondary;
+            superchain.chains.push_back(chain_node.chain);
+            superchain.score = chain_node.chain->score;
         }
     }
     //std::cerr << "chain count " <<chains.size() <<std::endl;

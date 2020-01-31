@@ -26,8 +26,9 @@ int main_map(int argc, char** argv) {
     args::HelpFlag help(parser, "help", "display this help summary", {'h', "help"});
     args::ValueFlag<std::string> idx_in_file(parser, "FILE", "load the index from this prefix", {'i', "index"});
     args::ValueFlag<std::string> query_seq(parser, "SEQ", "query one sequence", {'s', "one-sequence"});
-    args::ValueFlag<uint64_t> max_gap_length(parser, "N", "maximum gap length in chaining", {'G', "max-gap-length"});
-    args::ValueFlag<uint64_t> threads(parser, "N", "number of threads to use", {'t', "threads"});
+    args::ValueFlag<uint64_t> max_gap_length(parser, "INT", "maximum gap length in chaining", {'G', "max-gap-length"});
+    args::ValueFlag<double> max_mismatch_rate(parser, "FLOAT", "maximum allowed mismatch rate (default 0.1)", {'r', "max-mismatch-rate"});
+    args::ValueFlag<uint64_t> threads(parser, "INT", "number of threads to use", {'t', "threads"});
     
     try {
         parser.ParseCLI(argc, argv);
@@ -64,6 +65,10 @@ int main_map(int argc, char** argv) {
     uint64_t max_gap = args::get(max_gap_length)
         ? args::get(max_gap_length) : 1000;
 
+    double mismatch_rate = args::get(max_mismatch_rate)
+        ? args::get(max_mismatch_rate)
+        : 0.1;
+
     if (!args::get(query_seq).empty()) {
         const std::string& query = args::get(query_seq);
         auto anchors = anchors_for_query(index,
@@ -82,7 +87,7 @@ int main_map(int argc, char** argv) {
                 superchain,
                 index,
                 index.kmer_length,
-                query.length());
+                mismatch_rate);
             write_alignment_gaf(std::cout, aln, index);
         }
     }
