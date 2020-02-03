@@ -7,6 +7,7 @@
 #include "index.hpp"
 #include "chain.hpp"
 #include "align.hpp"
+#include "mapper.hpp"
 
 namespace gyeet {
 
@@ -25,10 +26,12 @@ int main_map(int argc, char** argv) {
     args::ArgumentParser parser("map sequences to a graph");
     args::HelpFlag help(parser, "help", "display this help summary", {'h', "help"});
     args::ValueFlag<std::string> idx_in_file(parser, "FILE", "load the index from this prefix", {'i', "index"});
+    args::ValueFlagList<std::string> input_files(parser, "FILE", "input file, either FASTA or FASTQ, optionally gzipped, multiple allowed", {'f', "input-file"});
     args::ValueFlag<std::string> query_seq(parser, "SEQ", "query one sequence", {'s', "one-sequence"});
-    args::ValueFlag<uint64_t> max_gap_length(parser, "INT", "maximum gap length in chaining", {'G', "max-gap-length"});
+    args::ValueFlag<uint64_t> max_gap_length(parser, "N", "maximum gap length in chaining", {'G', "max-gap-length"});
     args::ValueFlag<double> max_mismatch_rate(parser, "FLOAT", "maximum allowed mismatch rate (default 0.1)", {'r', "max-mismatch-rate"});
-    args::ValueFlag<uint64_t> threads(parser, "INT", "number of threads to use", {'t', "threads"});
+    args::ValueFlag<uint64_t> align_best_n(parser, "N", "align the best N superchains", {'n', "align-best-n"});
+    args::ValueFlag<uint64_t> threads(parser, "N", "number of threads to use", {'t', "threads"});
     
     try {
         parser.ParseCLI(argc, argv);
@@ -69,7 +72,20 @@ int main_map(int argc, char** argv) {
         ? args::get(max_mismatch_rate)
         : 0.1;
 
-    if (!args::get(query_seq).empty()) {
+    uint64_t best_n = args::get(align_best_n) ? args::get(align_best_n) : 1;
+
+    uint64_t n_threads = args::get(threads) ? args::get(threads) : 1;
+
+    const std::vector<std::string> inputs(args::get(input_files));
+
+    if (!inputs.empty()) {
+        map_reads(inputs,
+                  index,
+                  max_gap,
+                  mismatch_rate,
+                  best_n,
+                  n_threads);
+    } else if (!args::get(query_seq).empty()) {
         const std::string& query = args::get(query_seq);
         auto anchors = anchors_for_query(index,
                                          query.c_str(),

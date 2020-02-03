@@ -214,6 +214,16 @@ ExternalProject_Get_property(edlib INSTALL_DIR)
 set(edlib_INCLUDE "${INSTALL_DIR}/include")
 set(edlib_LIB "${INSTALL_DIR}/lib")
 
+# atomic queue library
+ExternalProject_Add(atomicqueue
+  SOURCE_DIR "${CMAKE_SOURCE_DIR}/deps/atomic_queue"
+  UPDATE_COMMAND ""
+  INSTALL_COMMAND ""
+  BUILD_COMMAND ""
+  CONFIGURE_COMMAND "")
+ExternalProject_Get_property(atomicqueue SOURCE_DIR)
+set(atomicqueue_INCLUDE "${SOURCE_DIR}")
+
 #set(CMAKE_BUILD_TYPE Release)
 set(CMAKE_BUILD_TYPE Debug)
 
@@ -225,6 +235,7 @@ add_library(gyeet_objs OBJECT
   ${CMAKE_SOURCE_DIR}/src/index.cpp
   ${CMAKE_SOURCE_DIR}/src/chain.cpp
   ${CMAKE_SOURCE_DIR}/src/align.cpp
+  ${CMAKE_SOURCE_DIR}/src/mapper.cpp
   ${CMAKE_SOURCE_DIR}/src/position.cpp
   ${CMAKE_SOURCE_DIR}/src/threads.cpp
   ${CMAKE_SOURCE_DIR}/src/utility.cpp
@@ -253,7 +264,8 @@ set(gyeet_DEPS
     mmap_allocator
     ips4o
     cgranges
-    edlib)
+    edlib
+    atomicqueue)
 add_dependencies(gyeet_objs ${gyeet_DEPS})
 
 set(gyeet_INCLUDES
@@ -275,7 +287,8 @@ set(gyeet_INCLUDES
   ${mmap_allocator_INCLUDE}
   ${ips4o_INCLUDE}
   ${cgranges_INCLUDE}
-  ${edlib_INCLUDE})
+  ${edlib_INCLUDE}
+  ${atomicqueue_INCLUDE})
 
 set(gyeet_LIBS
   ${sdsl-lite_LIB}/libsdsl.a
@@ -285,7 +298,8 @@ set(gyeet_LIBS
   ${mmap_allocator_LIB}/libmmap_allocator.a
   ${edlib_LIB}/libedlib.a
   dl
-  atomic)
+  atomic
+  z)
 
 #set(gyeet_HEADERS
 #  ${CMAKE_SOURCE_DIR}/src/xg.hpp
