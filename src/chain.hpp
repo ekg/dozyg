@@ -77,9 +77,11 @@ struct superchain_t {
 
 std::vector<superchain_t>
 superchains(std::vector<chain_t>& chains,
-            const uint64_t bandwidth = 50);
+            const uint64_t& kmer_length,
+            const uint64_t bandwidth = 1000);
 
 double score_chain_nodes(const chain_node_t& a,
-                         const chain_node_t& b);
+                         const chain_node_t& b,
+                         const uint64_t& kmer_length);
 
 }

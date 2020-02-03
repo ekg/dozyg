@@ -59,7 +59,40 @@ void write_chain_gaf(
         << path_length << "\t" // fixme
         << path_length << "\t" // fixme
         << path_length << "\t" // fixme
-        << std::min((int)std::round(chain.mapping_quality), 254) << std::endl;
+        << std::min((int)std::round(chain.mapping_quality), 254) << "\t"
+        << "ta:Z:chain" << std::endl;
+
+}
+
+void write_superchain_gaf(
+    std::ostream& out,
+    const superchain_t& superchain,
+    const gyeet_index_t& index,
+    const std::string& query_name,
+    const uint64_t& query_length) {
+    out << query_name << "\t"
+        << query_length << "\t"
+        << superchain.chains.front()->anchors.front()->query_begin << "\t"
+        << superchain.chains.back()->anchors.back()->query_end << "\t"
+        << "+" << "\t";  // we're always forward strand relative to our path
+    uint64_t path_length = 0;
+    for (auto& chain : superchain.chains) {
+        for_handle_at_anchor_begin_in_chain(
+            *chain, index,
+            [&out,&index,&path_length](const handle_t& h) {
+                path_length += index.get_length(h);
+                out << (handle_is_rev(h) ? "<" : ">") << to_id(h);
+            });
+    }
+    out << "\t"
+        << path_length << "\t"
+        << 0 << "\t" // fixme
+        << path_length << "\t" // fixme
+        << path_length << "\t" // fixme
+        << path_length << "\t" // fixme
+        << 0 << "\t"
+        << "ta:Z:superchain" << std::endl;
+        //<< std::min((int)std::round(superchain.mapping_quality), 254) << std::endl;
 
 }
 
@@ -85,7 +118,7 @@ void write_alignment_gaf(
         << path_length << "\t" // fixme
         << std::min((int)std::round(aln.mapping_quality), 254) << "\t"
         << "as:i:" << aln.score << "\t"
-        << "ta:A:" << (aln.is_secondary ? "S" : "P") << "\t"
+        << "ta:Z:" << (aln.is_secondary ? "secondary" : "primary") << "\t"
         << "cs:f:" << aln.chain_score << "\t"
         << "ac:i:" << aln.anchor_count << "\t"
         << "cg:Z:" << aln.cigar << std::endl;
@@ -106,8 +139,7 @@ alignment_t align(
     const uint64_t& max_edit_distance) {
 
     seq_pos_t query_pos = chain.anchors.front()->query_begin;
-    seq_pos_t target_pos = std::min(chain.anchors.front()->target_begin,
-                                    chain.anchors.front()->target_end);
+    seq_pos_t target_pos = chain.anchors.front()->target_end;
     if (seq_pos::offset(target_pos) >= extra_bp) {
         target_pos -= extra_bp;
     }
@@ -115,7 +147,7 @@ alignment_t align(
     const char* query_begin = query + seq_pos::offset(query_pos);
     uint64_t query_length = chain.anchors.back()->query_end - query_pos;
     const char* target_begin = index.get_target(target_pos);
-    uint64_t target_length = chain.anchors.back()->target_end - target_pos;
+    uint64_t target_length = chain.anchors.back()->target_begin + extra_bp - target_pos;
 
     EdlibAlignResult result = edlibAlign(query_begin, query_length, target_begin, target_length,
                                          edlibNewAlignConfig(max_edit_distance, EDLIB_MODE_NW, EDLIB_TASK_PATH, NULL, 0));
@@ -381,13 +413,16 @@ alignment_t superalign(
         auto& chain = superchain.chains[i];
         // what's the gap from the last chain on the query?
         int64_t query_gap = (i > 0 ?
-                             chain->anchors.front()->query_begin - superchain.chains[i-1]->anchors.front()->query_end
+                             chain->anchors.front()->query_begin - superchain.chains[i-1]->anchors.back()->query_end
                              : chain->anchors.front()->query_begin);
+        std::cerr << "query gap " << query_gap << std::endl;
         // tack on an insertion for unaligned intervening sequence
         if (query_gap < 0) {
+            /*
             std::cerr << "[gyeet map] superchains overlap in query" << std::endl;
             assert(false);
             exit(1);
+            */
         } else if (query_gap > 0) {
             extend_cigar(superaln.cigar, query_gap, 'I');
         }

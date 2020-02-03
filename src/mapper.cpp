@@ -64,6 +64,7 @@ void reader_thread(
                     std::this_thread::sleep_for(100ns);
                 }
             });
+        
     }
     reader_done.store(true);
 }
@@ -108,9 +109,17 @@ std::string map_seq(
     auto query_chains = chains(anchors,
                                index.kmer_length,
                                max_chain_gap);
-    auto query_superchains = superchains(query_chains);
     std::stringstream ss;
+    for (auto& chain : query_chains) {
+        write_chain_gaf(ss, chain, index, name, query.length());
+    }
+    auto query_superchains = superchains(query_chains, index.kmer_length);
     for (auto& superchain : query_superchains) {
+        write_superchain_gaf(ss, superchain, index, name, query.length());
+    }
+    uint64_t up_to = std::min(align_best_n, (uint64_t)query_superchains.size());
+    for (uint64_t i = 0; i < up_to; ++i) {
+        auto& superchain = query_superchains[i];
         alignment_t aln = superalign(
             name,
             query.length(),
@@ -170,9 +179,10 @@ void map_reads(
     gaf_atomic_queue_t gaf_queue;
     std::atomic<bool> reader_done;
     reader_done.store(false);
-    std::atomic<bool> workers_done;
-    workers_done.store(false);
     std::vector<std::atomic<bool>> working(nthreads);
+    for (auto& w : working) {
+        w.store(true);
+    }
     // launch reader
     std::thread reader(&reader_thread, std::ref(input_files), std::ref(seq_queue), std::ref(reader_done));
     // launch writer
@@ -193,13 +203,13 @@ void map_reads(
     }
 
     reader.join();
-    std::cerr << "reader done" << std::endl;
+    //std::cerr << "reader done" << std::endl;
     for (auto& worker : workers) {
         worker.join();
     }
-    std::cerr << "workers done" << std::endl;
+    //std::cerr << "workers done" << std::endl;
     writer.join();
-    std::cerr << "writer done" << std::endl;
+    //std::cerr << "writer done" << std::endl;
     //while (!reader_done.load() || !still_working(working)) {
 //}
     // watch until we're done reading, done mapping, and done writing

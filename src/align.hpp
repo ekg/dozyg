@@ -46,6 +46,13 @@ void write_chain_gaf(
     const std::string& query_name,
     const uint64_t& query_length);
 
+void write_superchain_gaf(
+    std::ostream& out,
+    const superchain_t& superchain,
+    const gyeet_index_t& index,
+    const std::string& query_name,
+    const uint64_t& query_length);
+
 void write_alignment_gaf(
     std::ostream& out,
     const alignment_t& aln,

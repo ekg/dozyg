@@ -66,8 +66,10 @@ chains(std::vector<anchor_t>& anchors,
         }
     }
 
+    /*
     std::ofstream out("chains.dot");
     out << "digraph G {" << std::endl;
+    //out << "rankdir=LR;" << std::endl;
     for (auto& anchor : anchors) {
         out << "\"" << &anchor << "\" "
             << "[shape=box label=\"" << "score=" << anchor.max_chain_score << ","
@@ -79,6 +81,7 @@ chains(std::vector<anchor_t>& anchors,
     }
     out << "}" << std::endl;
     out.close();
+    */
 
     // collect chains
     std::vector<chain_t> chains;
@@ -199,6 +202,7 @@ double score_anchors(const anchor_t& a,
 
 std::vector<superchain_t>
 superchains(std::vector<chain_t>& chains,
+            const uint64_t& kmer_length,
             const uint64_t bandwidth) {
     // sort the chains by end coordinate in the query
     // score each with the previous N
@@ -226,7 +230,7 @@ superchains(std::vector<chain_t>& chains,
             chain_node_t& chain_node_j = chain_nodes[j];
             //anchor_t& anchor_j = anchors[j];
             //std::cerr << "anchor_j " << anchor_j.query_begin << ".." << anchor_j.query_end << std::endl;
-            double proposed_score = score_chain_nodes(chain_node_j, chain_node_i);
+            double proposed_score = score_chain_nodes(chain_node_j, chain_node_i, kmer_length);
             //std::cerr << "proposed " << proposed_score << " vs " << chain_node_i.max_superchain_score << std::endl;
             //std::cerr << "diff " << proposed_score - chain_node_i.max_superchain_score << std::endl;
             if (proposed_score > chain_node_i.max_superchain_score) {
@@ -236,6 +240,24 @@ superchains(std::vector<chain_t>& chains,
             }
         }
     }
+    
+    std::ofstream out("superchains.dot");
+    out << "digraph G {" << std::endl;
+    //out << "rankdir=LR;" << std::endl;
+    for (auto& chain_node : chain_nodes) {
+        auto& first_anchor = *chain_node.chain->anchors.front();
+        auto& last_anchor = *chain_node.chain->anchors.back();
+        out << "\"" << &chain_node << "\" "
+            << "[shape=box label=\"" << "score=" << chain_node.max_superchain_score << ","
+            << "(" << seq_pos::to_string(first_anchor.query_begin) << ".."
+            << seq_pos::to_string(last_anchor.query_end) << "),"
+            << "(" << seq_pos::to_string(first_anchor.target_begin) << ".."
+            << seq_pos::to_string(last_anchor.target_end) << ")\"];" << std::endl
+            << "\"" << chain_node.best_predecessor << "\" -> \"" << &chain_node << "\";" << std::endl;
+    }
+    out << "}" << std::endl;
+    out.close();
+
     // collect superchains
     std::vector<superchain_t> superchains;
     int64_t i = chain_nodes.size()-1;
@@ -287,9 +309,10 @@ superchains(std::vector<chain_t>& chains,
 }
 
 double score_chain_nodes(const chain_node_t& a,
-                         const chain_node_t& b) {
-    // do we overlap? --> 0
-    if (a.chain->anchors.back()->query_end
+                         const chain_node_t& b,
+                         const uint64_t& kmer_length) {
+    // ignore if the a chain is contained in b
+    if (a.chain->anchors.front()->query_begin
         > b.chain->anchors.front()->query_begin) {
         return 0;
     } else {
