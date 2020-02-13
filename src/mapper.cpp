@@ -110,13 +110,17 @@ std::string map_seq(
                                index.kmer_length,
                                max_chain_gap);
     std::stringstream ss;
+    /*
     for (auto& chain : query_chains) {
         write_chain_gaf(ss, chain, index, name, query.length());
     }
+    */
     auto query_superchains = superchains(query_chains, index.kmer_length);
+    /*
     for (auto& superchain : query_superchains) {
         write_superchain_gaf(ss, superchain, index, name, query.length());
     }
+    */
     uint64_t up_to = std::min(align_best_n, (uint64_t)query_superchains.size());
     for (uint64_t i = 0; i < up_to; ++i) {
         auto& superchain = query_superchains[i];

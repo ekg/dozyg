@@ -70,7 +70,7 @@ int main_map(int argc, char** argv) {
 
     double mismatch_rate = args::get(max_mismatch_rate)
         ? args::get(max_mismatch_rate)
-        : 0.1;
+        : 0.2;
 
     uint64_t best_n = args::get(align_best_n) ? args::get(align_best_n) : 1;
 

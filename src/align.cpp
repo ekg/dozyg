@@ -140,15 +140,20 @@ alignment_t align(
 
     seq_pos_t query_pos = chain.anchors.front()->query_begin;
     seq_pos_t target_pos = chain.anchors.front()->target_end;
+    //std::cerr << "target pos " << target_pos << std::endl;
     if (seq_pos::offset(target_pos) >= extra_bp) {
         target_pos -= extra_bp;
+    } else {
+        target_pos = 0;
     }
     //std::cerr << seq_pos::offset(target_pos) << std::endl;
     const char* query_begin = query + seq_pos::offset(query_pos);
     uint64_t query_length = chain.anchors.back()->query_end - query_pos;
     const char* target_begin = index.get_target(target_pos);
-    uint64_t target_length = chain.anchors.back()->target_begin + extra_bp - target_pos;
-
+    seq_pos_t target_end = seq_pos::encode(std::min(index.seq_length, seq_pos::offset(chain.anchors.back()->target_begin) + extra_bp),
+                                           seq_pos::is_rev(chain.anchors.back()->target_begin));
+    uint64_t target_length = target_end - target_pos;
+    //std::cerr << "query start " << seq_pos::offset(query_pos) << " length " << query_length << " target start " << target_pos << " length " << target_length << std::endl;
     EdlibAlignResult result = edlibAlign(query_begin, query_length, target_begin, target_length,
                                          edlibNewAlignConfig(max_edit_distance, EDLIB_MODE_NW, EDLIB_TASK_PATH, NULL, 0));
 
@@ -244,7 +249,7 @@ void extend_cigar(cigar_t& cigar, const cigar_t& extension) {
 void extend_cigar(cigar_t& cigar, const uint32_t& len, const char& type) {
     if (cigar.empty()) {
         cigar.push_back(std::make_pair(len, type));
-    } else {
+    } else if (len) {
         if (cigar.back().second == type) {
             cigar.back().first += len;
         } else {
@@ -302,7 +307,7 @@ void graph_relativize(
     // cigar relative to this path
     // target (in graph path) begin and end
     // and score / edit distance
-    seq_pos_t target_first_match = 0;
+    seq_pos_t target_first_match = std::numeric_limits<uint64_t>::max();
     seq_pos_t target_last_match = 0;
 
     auto record =
@@ -330,20 +335,23 @@ void graph_relativize(
     cigar_t curr_cigar;
     for (uint64_t i = 0; i < alignmentLength; i++) {
         // determine if we need to update our path
-        handle_t next = index.get_handle_at(target_pos);
+        handle_t handle = index.get_handle_at(target_pos);
         if (i == 0) {
-            curr = next;
-        } else if (next != curr) {
+            curr = handle;
+        } else if (handle != curr) {
             record(curr, curr_cigar);
             curr_cigar.clear();
-            curr = next;
+            curr = handle;
         }
+        /*
         if (i == alignmentLength) {
             break;
         }
+        */
 
         // extend cigar
         const uint8_t& move_code = alignment[i];
+        //std::cerr << "Move code " << moveCodeToChar[move_code] << std::endl;
         if (!curr_cigar.empty()
             && curr_cigar.back().second == moveCodeToChar[move_code]) {
             ++curr_cigar.back().first;
@@ -355,11 +363,11 @@ void graph_relativize(
         switch (move_code) {
         case 0:
         case 3:
-            if (target_first_match == 0) {
+            if (target_first_match == std::numeric_limits<uint64_t>::max()) {
                 target_first_match = target_pos;
             }
-            ++query_pos;
             target_last_match = target_pos;
+            ++query_pos;
             ++target_pos;
             break;
         case 1:
@@ -415,7 +423,7 @@ alignment_t superalign(
         int64_t query_gap = (i > 0 ?
                              chain->anchors.front()->query_begin - superchain.chains[i-1]->anchors.back()->query_end
                              : chain->anchors.front()->query_begin);
-        std::cerr << "query gap " << query_gap << std::endl;
+        //std::cerr << "query gap " << query_gap << std::endl;
         // tack on an insertion for unaligned intervening sequence
         if (query_gap < 0) {
             /*
@@ -433,7 +441,7 @@ alignment_t superalign(
                 query,
                 *chain,
                 index,
-                index.kmer_length,
+                index.kmer_length * (1 + max_mismatch_rate),
                 edit_distance_estimate(*chain, max_mismatch_rate));
         // extend the superalignment
         // add deletions for distance to the target start
