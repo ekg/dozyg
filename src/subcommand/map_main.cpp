@@ -92,8 +92,9 @@ int main_map(int argc, char** argv) {
                                          query.length());
         auto query_chains = chains(anchors,
                                    kmer_length,
-                                   max_gap);
-        auto query_superchains = superchains(query_chains, kmer_length);
+                                   max_gap,
+                                   mismatch_rate);
+        auto query_superchains = superchains(query_chains, kmer_length, mismatch_rate);
         std::string query_name = "unknown";
         for (auto& superchain : query_superchains) {
             alignment_t aln = superalign(

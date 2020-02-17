@@ -39,6 +39,59 @@ struct chain_t {
     bool processed(void) {
         return mapping_quality != std::numeric_limits<double>::min();
     }
+    // inner target boundaries
+    seq_pos_t target_begin = 0;
+    seq_pos_t target_end = 0;
+    // query boundaries are fixed
+    seq_pos_t query_begin(void) const { return anchors.front()->query_begin; }
+    seq_pos_t query_end(void) const { return anchors.back()->query_end; }
+    void compute_boundaries(const uint64_t& seed_length, const double& mismatch_rate) {
+        // find the longest contiguous range covered by the chain
+        // where the size is no more than some function of our seed_length * number of anchors * 1+mismatch_rate
+        
+        // find the inner boundaries
+        auto& first_target_end = anchors.front()->target_end;
+        auto& last_target_begin = anchors.back()->target_begin;
+        // can we linearly extend to the start, end?
+        auto& first_target_begin = anchors.front()->target_begin;
+        auto& last_target_end = anchors.back()->target_end;
+        //if (first_target_begin < last_target_end) {
+        if (seq_pos::is_rev(first_target_begin) == seq_pos::is_rev(last_target_end) &&
+            first_target_begin < last_target_end && score * (1+mismatch_rate) > last_target_end - first_target_begin) {
+            target_begin = first_target_begin;
+            target_end = last_target_end;
+        } else if (seq_pos::is_rev(first_target_end) == seq_pos::is_rev(last_target_begin)
+                   && target_begin < target_end) {
+            target_begin = first_target_end;
+            target_end = last_target_begin;
+        } else {
+            // chains with a single anchor that jumps
+            /*
+            std::cerr << "chain failure " << std::endl;
+            for (auto& anchor : anchors) {
+                std::cerr << &anchor << " " << "score=" << anchor->max_chain_score << ","
+                          << "(" << seq_pos::to_string(anchor->query_begin) << ".."
+                          << seq_pos::to_string(anchor->query_end) << "),"
+                          << "(" << seq_pos::to_string(anchor->target_begin) << ".."
+                          << seq_pos::to_string(anchor->target_end) << ")" << std::endl;
+                    //<< "\"" << anchor.best_predecessor << "\" -> \"" << &anchor << "\";" << std::endl;
+            }
+            */
+            score = -std::numeric_limits<double>::max();
+        }
+        /*
+        if (first_target_end > first_target_begin && first_target_end - first_target_begin <= tolerance) {
+            target_begin = first_target_begin;
+        } else {
+            target_begin = first_target_end;
+        }
+        if (last_target_begin < last_target_end && last_target_end - last_target_begin <= tolerance) {
+            target_end = last_target_end;
+        } else {
+            target_end = last_target_begin;
+        }
+        */
+    }
 };
 
 struct chain_node_t {
@@ -53,6 +106,7 @@ std::vector<chain_t>
 chains(std::vector<anchor_t>& anchors,
        const uint64_t& seed_length,
        const uint64_t& max_gap,
+       const double& mismatch_rate,
        const uint64_t bandwidth = 50,
        const double secondary_chain_threshold = 0.5,
        const double max_mapq = 60);
@@ -61,6 +115,8 @@ double score_anchors(const anchor_t& a,
                      const anchor_t& b,
                      const uint64_t& seed_length,
                      const uint64_t& max_gap);
+
+uint64_t chain_query_length(const chain_t& chain);
 
 struct superchain_t {
     std::vector<chain_t*> chains;
@@ -78,6 +134,7 @@ struct superchain_t {
 std::vector<superchain_t>
 superchains(std::vector<chain_t>& chains,
             const uint64_t& kmer_length,
+            const double& mismatch_rate,
             const uint64_t bandwidth = 1000);
 
 double score_chain_nodes(const chain_node_t& a,

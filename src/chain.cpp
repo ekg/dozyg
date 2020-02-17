@@ -33,6 +33,7 @@ std::vector<chain_t>
 chains(std::vector<anchor_t>& anchors,
        const uint64_t& seed_length,
        const uint64_t& max_gap,
+       const double& mismatch_rate,
        const uint64_t bandwidth,
        const double secondary_chain_threshold,
        const double max_mapq) {
@@ -166,6 +167,9 @@ chains(std::vector<anchor_t>& anchors,
             }
         }
     }
+    for (auto& chain : chains) {
+        chain.compute_boundaries(seed_length, mismatch_rate);
+    }
     return chains;
 }
 
@@ -173,7 +177,12 @@ double score_anchors(const anchor_t& a,
                      const anchor_t& b,
                      const uint64_t& seed_length,
                      const uint64_t& max_gap) {
-    if (a.query_end >= b.query_end) {
+    if (a.query_end >= b.query_end
+        ||
+        !( seq_pos::is_rev(a.target_end)
+           == seq_pos::is_rev(b.target_end)
+           == seq_pos::is_rev(a.target_begin)
+           == seq_pos::is_rev(b.target_begin))) {
         return -std::numeric_limits<double>::max();
     } else {
         uint64_t query_length = std::min(b.query_begin - a.query_begin,
@@ -200,9 +209,14 @@ double score_anchors(const anchor_t& a,
     }
 }
 
+uint64_t chain_query_length(const chain_t& chain) {
+    return chain.anchors.back()->query_end - chain.anchors.front()->query_begin;
+}
+
 std::vector<superchain_t>
 superchains(std::vector<chain_t>& chains,
             const uint64_t& kmer_length,
+            const double& mismatch_rate,
             const uint64_t bandwidth) {
     // sort the chains by end coordinate in the query
     // score each with the previous N
@@ -224,7 +238,7 @@ superchains(std::vector<chain_t>& chains,
     for (int64_t i = 0; i < chain_nodes.size(); ++i) {
         chain_node_t& chain_node_i = chain_nodes[i];
         //std::cerr << "anchor_i " << anchor_i.query_begin << ".." << anchor_i.query_end << std::endl;
-        chain_node_i.max_superchain_score = chain_node_i.chain->score;
+        chain_node_i.max_superchain_score = chain_node_i.chain->score; // chain_query_length(*chain_node_i.chain)
         int64_t min_j = bandwidth > i ? 0 : i - bandwidth;
         for (int64_t j = i-1; j >= min_j; --j) {
             chain_node_t& chain_node_j = chain_nodes[j];
@@ -241,7 +255,6 @@ superchains(std::vector<chain_t>& chains,
         }
     }
 
-    /*
     std::ofstream out("superchains.dot");
     out << "digraph G {" << std::endl;
     //out << "rankdir=LR;" << std::endl;
@@ -258,7 +271,6 @@ superchains(std::vector<chain_t>& chains,
     }
     out << "}" << std::endl;
     out.close();
-    */
 
     // collect superchains
     std::vector<superchain_t> superchains;
@@ -314,9 +326,10 @@ double score_chain_nodes(const chain_node_t& a,
                          const chain_node_t& b,
                          const uint64_t& kmer_length) {
     // ignore if the a chain is contained in b
-    if (a.chain->anchors.front()->query_begin
-        > b.chain->anchors.front()->query_begin) {
-        return 0;
+    if (a.chain->anchors.back()->query_end
+        > b.chain->anchors.front()->query_begin + kmer_length) {
+        return -std::numeric_limits<double>::max();
+        //return 0;
     } else {
         // otherwise, add scores
         return a.max_superchain_score + b.chain->score;

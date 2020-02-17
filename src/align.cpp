@@ -138,22 +138,37 @@ alignment_t align(
     const uint64_t& extra_bp,
     const uint64_t& max_edit_distance) {
 
-    seq_pos_t query_pos = chain.anchors.front()->query_begin;
-    seq_pos_t target_pos = chain.anchors.front()->target_end;
-    //std::cerr << "target pos " << target_pos << std::endl;
-    if (seq_pos::offset(target_pos) >= extra_bp) {
-        target_pos -= extra_bp;
+    seq_pos_t query_pos = chain.query_begin(); //anchors.front()->query_begin;
+    seq_pos_t target_pos = chain.target_begin; // 0; // XXX TODO take this from the superchain chain_node_t target start and end
+    /*
+    if (chain.anchors.front()->target_begin > chain.anchors.front()->target_end) {
+        target_pos = chain.anchors.front()->target_end;
+        if (seq_pos::offset(target_pos) >= extra_bp) {
+            target_pos -= extra_bp;
+        } else {
+            target_pos = 0;
+        }
     } else {
-        target_pos = 0;
+        target_pos = chain.anchors.front()->target_begin;
     }
+    */
     //std::cerr << seq_pos::offset(target_pos) << std::endl;
     const char* query_begin = query + seq_pos::offset(query_pos);
     uint64_t query_length = chain.anchors.back()->query_end - query_pos;
     const char* target_begin = index.get_target(target_pos);
-    seq_pos_t target_end = seq_pos::encode(std::min(index.seq_length, seq_pos::offset(chain.anchors.back()->target_begin) + extra_bp),
-                                           seq_pos::is_rev(chain.anchors.back()->target_begin));
+    //seq_pos_t target_end = seq_pos::encode(std::min(index.seq_length, seq_pos::offset(chain.anchors.back()->target_begin) + extra_bp),
+    //seq_pos::is_rev(chain.anchors.back()->target_begin));
+    seq_pos_t target_end = chain.target_end; // anchors.back()->target_end;
     uint64_t target_length = target_end - target_pos;
-    //std::cerr << "query start " << seq_pos::offset(query_pos) << " length " << query_length << " target start " << target_pos << " length " << target_length << std::endl;
+    /*
+    if (target_end > target_pos) {
+        target_length = target_end - target_pos;
+    } else {
+        // XXXX haxx
+        target_length = query_length;
+    }
+    */
+    std::cerr << "query start " << seq_pos::offset(query_pos) << " length " << query_length << " target start " << seq_pos::to_string(target_pos) << " end " << seq_pos::to_string(target_end) << " last anchor begin " <<  seq_pos::to_string(chain.anchors.back()->target_begin) << " length " << target_length << std::endl;
     EdlibAlignResult result = edlibAlign(query_begin, query_length, target_begin, target_length,
                                          edlibNewAlignConfig(max_edit_distance, EDLIB_MODE_NW, EDLIB_TASK_PATH, NULL, 0));
 
