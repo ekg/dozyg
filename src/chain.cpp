@@ -255,6 +255,7 @@ superchains(std::vector<chain_t>& chains,
         }
     }
 
+    /*
     std::ofstream out("superchains.dot");
     out << "digraph G {" << std::endl;
     //out << "rankdir=LR;" << std::endl;
@@ -271,6 +272,7 @@ superchains(std::vector<chain_t>& chains,
     }
     out << "}" << std::endl;
     out.close();
+    */
 
     // collect superchains
     std::vector<superchain_t> superchains;

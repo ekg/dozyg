@@ -149,7 +149,7 @@ alignment_t align(
     */
     //std::cerr << seq_pos::offset(target_pos) << std::endl;
     const char* query_begin = query + seq_pos::offset(query_pos);
-    uint64_t query_length = chain.anchors.back()->query_end - query_pos;
+    uint64_t query_length = chain.query_end() - query_pos;
     const char* target_begin = index.get_target(target_pos);
     /*
     seq_pos_t target_end = seq_pos::encode(std::min(index.seq_length, seq_pos::offset(chain.anchors.back()->target_begin) + extra_bp),
@@ -165,9 +165,11 @@ alignment_t align(
         target_length = query_length;
     }
     */
-    std::cerr << "query start " << seq_pos::offset(query_pos) << " length " << query_length << " target start " << seq_pos::to_string(target_pos) << " end " << seq_pos::to_string(target_end) << " last anchor begin " <<  seq_pos::to_string(chain.anchors.back()->target_begin) << " length " << target_length << std::endl;
+    //std::cerr << "query start " << seq_pos::offset(query_pos) << " length " << query_length << " target start " << seq_pos::to_string(target_pos) << " end " << seq_pos::to_string(target_end) << " last anchor begin " <<  seq_pos::to_string(chain.anchors.back()->target_begin) << " length " << target_length << std::endl;
     EdlibAlignResult result = edlibAlign(query_begin, query_length, target_begin, target_length,
                                          edlibNewAlignConfig(max_edit_distance, EDLIB_MODE_NW, EDLIB_TASK_PATH, NULL, 0));
+
+    //std::cerr << "numlocs " << result.numLocations << std::endl;
 
     alignment_t aln;
     aln.query_name = query_name;
@@ -187,7 +189,7 @@ alignment_t align(
     aln.mapping_quality = chain.mapping_quality;
     // these are fine
     aln.query_begin = seq_pos::offset(query_pos);
-    aln.query_end = seq_pos::offset(chain.anchors.back()->query_end);
+    aln.query_end = seq_pos::offset(chain.query_end()); //anchors.back()->query_end);
     // change to offsets on the path we've given
     //aln.target_begin = seq_pos::offset(target_pos);
     //aln.target_end = seq_pos::offset(chain.anchors.back()->target_end);
@@ -407,8 +409,10 @@ uint64_t edit_distance_estimate(const chain_t& chain, const double& max_mismatch
     if (chain.anchors.empty()) {
         return 0;
     } else {
-        int64_t query_length = chain.anchors.back()->query_end - chain.anchors.front()->query_end;
-        int64_t target_length = chain.anchors.back()->target_end - chain.anchors.front()->target_end;
+        int64_t query_length = chain.query_end() - chain.query_begin();
+        int64_t target_length = chain.target_end - chain.target_begin;
+        //int64_t query_length = chain.anchors.back()->query_end - chain.anchors.front()->query_end;
+        //int64_t target_length = chain.anchors.back()->target_end - chain.anchors.front()->target_end;
         return std::abs(query_length - target_length) + std::ceil(query_length * max_mismatch_rate);
     }
 }
@@ -425,16 +429,16 @@ alignment_t superalign(
     alignment_t superaln;
     superaln.query_name = query_name;
     superaln.query_length = query_total_length;
-    superaln.query_begin = (superchain.chains.size() ? seq_pos::offset(superchain.chains.front()->anchors.front()->query_begin) : 0);
-    superaln.query_end = (superchain.chains.size() ? seq_pos::offset(superchain.chains.back()->anchors.back()->query_end) : 0);
+    superaln.query_begin = (superchain.chains.size() ? seq_pos::offset(superchain.chains.front()->query_begin()) : 0);
+    superaln.query_end = (superchain.chains.size() ? seq_pos::offset(superchain.chains.back()->query_end()) : 0);
     superaln.mapping_quality = std::numeric_limits<double>::max();
     superaln.is_secondary = superchain.is_secondary;
     for (uint64_t i = 0; i < superchain.chains.size(); ++i) {
         auto& chain = superchain.chains[i];
         // what's the gap from the last chain on the query?
         int64_t query_gap = (i > 0 ?
-                             chain->anchors.front()->query_begin - superchain.chains[i-1]->anchors.back()->query_end
-                             : chain->anchors.front()->query_begin);
+                             chain->query_begin() - superchain.chains[i-1]->query_end()
+                             : chain->query_begin());
         //std::cerr << "query gap " << query_gap << std::endl;
         // tack on an insertion for unaligned intervening sequence
         if (query_gap < 0) {
