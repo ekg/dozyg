@@ -65,7 +65,11 @@ alignment_t align(
     const chain_t& chain,
     const gyeet_index_t& index,
     const uint64_t& extra_bp,
-    const uint64_t& max_edit_distance);
+    const uint64_t& max_edit_distance,
+    const seq_pos_t& query_pos,
+    const seq_pos_t& query_length,
+    const seq_pos_t& target_pos,
+    const seq_pos_t& target_length);
 
 bool has_matches(const cigar_t& cigar);
 uint64_t insertion_length(const cigar_t& cigar);
@@ -79,6 +83,7 @@ std::ostream& operator<<(std::ostream& out, const cigar_t& cigar);
 void extend_cigar_string(std::string& cigar_str, const cigar_t& cigar);
 void extend_cigar(cigar_t& cigar, const cigar_t& extension);
 void extend_cigar(cigar_t& cigar, const uint32_t& len, const char& type);
+void cigar_handle_skips(cigar_t& cigar);
 
 void graph_relativize(
     alignment_t& aln,

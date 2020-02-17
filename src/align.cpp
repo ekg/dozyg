@@ -136,10 +136,14 @@ alignment_t align(
     const chain_t& chain,
     const gyeet_index_t& index,
     const uint64_t& extra_bp,
-    const uint64_t& max_edit_distance) {
+    const uint64_t& max_edit_distance,
+    const seq_pos_t& query_pos,
+    const seq_pos_t& query_length,
+    const seq_pos_t& target_pos,
+    const seq_pos_t& target_length) {
 
-    seq_pos_t query_pos = chain.query_begin(); //anchors.front()->query_begin;
-    seq_pos_t target_pos = chain.target_begin; // 0; // XXX TODO take this from the superchain chain_node_t target start and end
+    //seq_pos_t query_pos = chain.query_begin(); //anchors.front()->query_begin;
+    //seq_pos_t target_pos = chain.target_begin; // 0; // XXX TODO take this from the superchain chain_node_t target start and end
     /*
     if (seq_pos::offset(target_pos) >= extra_bp) {
         target_pos -= extra_bp;
@@ -149,14 +153,14 @@ alignment_t align(
     */
     //std::cerr << seq_pos::offset(target_pos) << std::endl;
     const char* query_begin = query + seq_pos::offset(query_pos);
-    uint64_t query_length = chain.query_end() - query_pos;
+    //uint64_t query_length = chain.query_end() - query_pos;
     const char* target_begin = index.get_target(target_pos);
     /*
     seq_pos_t target_end = seq_pos::encode(std::min(index.seq_length, seq_pos::offset(chain.anchors.back()->target_begin) + extra_bp),
                                            seq_pos::is_rev(chain.anchors.back()->target_begin));
     */
-    seq_pos_t target_end = chain.target_end; // anchors.back()->target_end;
-    uint64_t target_length = target_end - target_pos;
+    //seq_pos_t target_end = chain.target_end; // anchors.back()->target_end;
+    //uint64_t target_length = target_end - target_pos;
     /*
     if (target_end > target_pos) {
         target_length = target_end - target_pos;
@@ -272,6 +276,33 @@ void extend_cigar(cigar_t& cigar, const uint32_t& len, const char& type) {
     }
 }
 
+void cigar_handle_skips(cigar_t& cigar) {
+    if (cigar.empty()) return;
+    if (cigar.size() > 1
+        && cigar.front().second == 'I'
+        && cigar.at(1).second == 'D') {
+        auto tmp = cigar.front();
+        cigar.front() = cigar.at(1);
+        cigar.at(1) = tmp;
+    }
+    // TODO in the case of short cigars, this could just swap the elements back
+    if (cigar.size() > 1
+        && cigar.back().second == 'I'
+        && cigar.at(cigar.size()-1).second == 'D') {
+        auto tmp = cigar.back();
+        cigar.back() = cigar.at(cigar.size()-1);
+        cigar.at(cigar.size()-1) = tmp;
+    }
+    // now we will start and end with deletions
+    // we can set them to N if so
+    if (cigar.front().second == 'D') {
+        cigar.front().second = 'N';
+    }
+    if (cigar.back().second == 'D') {
+        cigar.back().second = 'N';
+    }
+}
+
 int64_t score_cigar(
     const cigar_t& cigar,
     int64_t match,
@@ -279,6 +310,7 @@ int64_t score_cigar(
     int64_t gap_open,
     int64_t gap_extend) {
     int64_t score = 0;
+    uint64_t i = 0;
     for (auto& elem : cigar) {
         switch (elem.second) {
         case 'M':
@@ -290,11 +322,17 @@ int64_t score_cigar(
             break;
         case 'D':
         case 'I':
-            score -= gap_open + gap_extend * elem.first;
+            // we're doing a global alignment
+            // but we want a semiglobal one
+            // don't penalize indels at the beginning or end
+            if (i > 0 && i < cigar.size()-1) {
+                score -= gap_open + gap_extend * elem.first;
+            }
             break;
         default:
             break;
         }
+        ++i;
     }
     return score;
 }
@@ -397,6 +435,9 @@ void graph_relativize(
     }
     // last step
     record(curr, curr_cigar);
+    // swap D with N at the beginning and end of the cigar
+    // if the first element is 'I' and the second 'D', swap them
+    cigar_handle_skips(aln.cigar);
     aln.score = score_cigar(aln.cigar);
     // record our start and end on the first and last handles
     if (!aln.path.empty()) {
@@ -433,6 +474,7 @@ alignment_t superalign(
     superaln.query_end = (superchain.chains.size() ? seq_pos::offset(superchain.chains.back()->query_end()) : 0);
     superaln.mapping_quality = std::numeric_limits<double>::max();
     superaln.is_secondary = superchain.is_secondary;
+    //uint64_t flanking_bp = std::ceil(index.kmer_length * (1 + max_mismatch_rate));
     for (uint64_t i = 0; i < superchain.chains.size(); ++i) {
         auto& chain = superchain.chains[i];
         // what's the gap from the last chain on the query?
@@ -440,16 +482,20 @@ alignment_t superalign(
                              chain->query_begin() - superchain.chains[i-1]->query_end()
                              : chain->query_begin());
         //std::cerr << "query gap " << query_gap << std::endl;
+        /*
         // tack on an insertion for unaligned intervening sequence
         if (query_gap < 0) {
-            /*
             std::cerr << "[gyeet map] superchains overlap in query" << std::endl;
             assert(false);
             exit(1);
-            */
         } else if (query_gap > 0) {
-            extend_cigar(superaln.cigar, query_gap, 'I');
+            //extend_cigar(superaln.cigar, query_gap, 'I');
         }
+        */
+        seq_pos_t query_begin = chain->query_begin() - query_gap;
+        seq_pos_t target_begin = seq_pos::encode(std::max((int64_t)0, (int64_t)seq_pos::offset(chain->target_begin) - (int64_t)query_gap),
+                                                 seq_pos::is_rev(chain->target_begin));
+        if (query_begin >= chain->query_end()) continue;
         alignment_t aln
             = align(
                 query_name,
@@ -457,18 +503,22 @@ alignment_t superalign(
                 query,
                 *chain,
                 index,
-                index.kmer_length * (1 + max_mismatch_rate),
-                edit_distance_estimate(*chain, max_mismatch_rate));
+                extra_bp,
+                edit_distance_estimate(*chain, max_mismatch_rate),
+                query_begin,
+                chain->query_end() - query_begin,
+                target_begin,
+                chain->target_end - target_begin);
         // extend the superalignment
         // add deletions for distance to the target start
         if (aln.first_handle_from_begin > 0) {
-            extend_cigar(superaln.cigar, aln.first_handle_from_begin, 'D');
+            extend_cigar(superaln.cigar, aln.first_handle_from_begin, 'N');
         }
         // add the superalignment cigar
         extend_cigar(superaln.cigar, aln.cigar);
         //if (index.get_seq_pos(aln.path.back())
         if (aln.last_handle_to_end > 0) {
-            extend_cigar(superaln.cigar, aln.last_handle_to_end, 'D');
+            extend_cigar(superaln.cigar, aln.last_handle_to_end, 'N');
         }
         // and path
         superaln.path.reserve(superaln.path.size() + aln.path.size());

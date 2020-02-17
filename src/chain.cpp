@@ -331,7 +331,6 @@ double score_chain_nodes(const chain_node_t& a,
     if (a.chain->anchors.back()->query_end
         > b.chain->anchors.front()->query_begin + kmer_length) {
         return -std::numeric_limits<double>::max();
-        //return 0;
     } else {
         // otherwise, add scores
         return a.max_superchain_score + b.chain->score;

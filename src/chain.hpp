@@ -66,17 +66,6 @@ struct chain_t {
             target_end = last_target_begin;
         } else {
             // kill chains with a single anchor that jumps nonlinearly
-            /*
-            std::cerr << "chain failure " << std::endl;
-            for (auto& anchor : anchors) {
-                std::cerr << &anchor << " " << "score=" << anchor->max_chain_score << ","
-                          << "(" << seq_pos::to_string(anchor->query_begin) << ".."
-                          << seq_pos::to_string(anchor->query_end) << "),"
-                          << "(" << seq_pos::to_string(anchor->target_begin) << ".."
-                          << seq_pos::to_string(anchor->target_end) << ")" << std::endl;
-                    //<< "\"" << anchor.best_predecessor << "\" -> \"" << &anchor << "\";" << std::endl;
-            }
-            */
             score = -std::numeric_limits<double>::max();
         }
     }
