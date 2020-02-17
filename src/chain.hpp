@@ -65,7 +65,7 @@ struct chain_t {
             target_begin = first_target_end;
             target_end = last_target_begin;
         } else {
-            // chains with a single anchor that jumps
+            // kill chains with a single anchor that jumps nonlinearly
             /*
             std::cerr << "chain failure " << std::endl;
             for (auto& anchor : anchors) {
@@ -79,18 +79,6 @@ struct chain_t {
             */
             score = -std::numeric_limits<double>::max();
         }
-        /*
-        if (first_target_end > first_target_begin && first_target_end - first_target_begin <= tolerance) {
-            target_begin = first_target_begin;
-        } else {
-            target_begin = first_target_end;
-        }
-        if (last_target_begin < last_target_end && last_target_end - last_target_begin <= tolerance) {
-            target_end = last_target_end;
-        } else {
-            target_end = last_target_begin;
-        }
-        */
     }
 };
 
