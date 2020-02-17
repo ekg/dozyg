@@ -328,6 +328,7 @@ set_target_properties(gyeet_objs PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 add_executable(gyeet
   $<TARGET_OBJECTS:gyeet_objs>
   ${CMAKE_SOURCE_DIR}/src/main.cpp)
+add_dependencies(gyeet gyeet_objs)
 target_link_libraries(gyeet ${gyeet_LIBS})
 set_target_properties(gyeet PROPERTIES OUTPUT_NAME "gyeet")
 
