@@ -291,6 +291,8 @@ void gyeet_index_t::load(const std::string& in_prefix) {
     std::string bbx_in_filename = in_prefix + ".bbx";
     std::ifstream f(bbx_in_filename.c_str(), std::ios::binary);
     bphf->load(f);
+
+    loaded = true;
 }
 
 // get a key representation of a sequence kmer

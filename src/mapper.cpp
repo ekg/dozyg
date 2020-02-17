@@ -80,6 +80,7 @@ void writer_thread(
             break;
         } else if (gaf_lines != nullptr) {
             out << *gaf_lines;
+            delete gaf_lines;
         } else {
             std::this_thread::sleep_for(100ns);
         }
@@ -165,6 +166,7 @@ void worker_thread(
                             mismatch_rate,
                             align_best_n));
             gaf_queue.push(gaf_rec);
+            delete rec;
         } else {
             std::this_thread::sleep_for(100ns);
         }
