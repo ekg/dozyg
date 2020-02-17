@@ -164,9 +164,9 @@ set(picosha256_INCLUDE "${SOURCE_DIR}")
 ExternalProject_Add(mmmultimap
   SOURCE_DIR "${CMAKE_SOURCE_DIR}/deps/mmmultimap"
   UPDATE_COMMAND ""
+  INSTALL_COMMAND ""
   BUILD_COMMAND ""
-  UPDATE_COMMAND ""
-  INSTALL_COMMAND "")
+  CONFIGURE_COMMAND "")
 ExternalProject_Get_property(mmmultimap SOURCE_DIR)
 set(mmmultimap_INCLUDE "${SOURCE_DIR}/src")
 
