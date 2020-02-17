@@ -207,13 +207,9 @@ ExternalProject_Get_property(cgranges SOURCE_DIR)
 set(cgranges_INCLUDE "${SOURCE_DIR}/cpp")
 
 # edlib
-ExternalProject_Add(edlib
-  SOURCE_DIR "${CMAKE_SOURCE_DIR}/deps/edlib"
-  CMAKE_ARGS "${CMAKE_ARGS};-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>"
-  UPDATE_COMMAND "")
-ExternalProject_Get_property(edlib INSTALL_DIR)
-set(edlib_INCLUDE "${INSTALL_DIR}/include")
-set(edlib_LIB "${INSTALL_DIR}/lib")
+add_subdirectory(
+  deps/edlib EXCLUDE_FROM_ALL)
+set(edlib_INCLUDE deps/edlib/edlib/include)
 
 # atomic queue library
 ExternalProject_Add(atomicqueue
@@ -297,7 +293,7 @@ set(gyeet_LIBS
   ${sdsl-lite-divsufsort_LIB}/libdivsufsort64.a
   ${handlegraph_LIB}/libhandlegraph.a
   ${mmap_allocator_LIB}/libmmap_allocator.a
-  ${edlib_LIB}/libedlib.a
+  edlib
   dl
   atomic
   z)
