@@ -96,7 +96,7 @@ void graph_relativize(
 
 uint64_t edit_distance_estimate(const chain_t& chain, const double& max_mismatch_rate);
 
-alignment_t superalign(
+aalignment_t superalign(
     const std::string& query_name,
     const uint64_t& query_total_length,
     const char* query,

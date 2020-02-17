@@ -169,7 +169,7 @@ alignment_t align(
         target_length = query_length;
     }
     */
-    //std::cerr << "query start " << seq_pos::offset(query_pos) << " length " << query_length << " target start " << seq_pos::to_string(target_pos) << " length " << target_length << std::endl;
+    std::cerr << "query start " << seq_pos::offset(query_pos) << " length " << query_length << " target start " << seq_pos::to_string(target_pos) << " length " << target_length << std::endl;
 //" last anchor begin " <<  seq_pos::to_string(chain.anchors.back()->target_begin) << " length " << target_length << std::endl;
     EdlibAlignResult result = edlibAlign(query_begin, query_length, target_begin, target_length,
                                          edlibNewAlignConfig(max_edit_distance, EDLIB_MODE_NW, EDLIB_TASK_PATH, NULL, 0));
