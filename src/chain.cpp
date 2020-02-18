@@ -34,7 +34,7 @@ void chain_t::compute_boundaries(const uint64_t& seed_length, const double& mism
     // where the size is no more than some function of our seed_length * number of anchors * 1+mismatch_rate
     /*
     for (auto& anchor : anchors) {
-        std::cout << "\"" << &anchor << "\" "
+        std::cerr << "\"" << &anchor << "\" "
                   << "[shape=box label=\"" << "score=" << anchor->max_chain_score << ","
                   << "(" << seq_pos::to_string(anchor->query_begin) << ".."
                   << seq_pos::to_string(anchor->query_end) << "),"
@@ -55,11 +55,13 @@ void chain_t::compute_boundaries(const uint64_t& seed_length, const double& mism
         target_begin = first_target_begin;
         target_end = last_target_end;
     } else if (seq_pos::is_rev(first_target_end) == seq_pos::is_rev(last_target_begin)
-               && target_begin < target_end) {
+               && first_target_end < last_target_begin) {
         target_begin = first_target_end;
         target_end = last_target_begin;
     } else {
-        // kill chains with a single anchor that jumps nonlinearly
+        // kill chains that jump nonlinearly internally
+        //target_begin = first_target_end;
+        //target_end = last_target_begin;
         score = -std::numeric_limits<double>::max();
     }
     //std::cerr << "target begin " << seq_pos::to_string(target_begin) << std::endl;

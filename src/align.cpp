@@ -500,6 +500,7 @@ alignment_t superalign(
         seq_pos_t target_begin = seq_pos::encode(std::max((int64_t)0, (int64_t)seq_pos::offset(chain->target_begin) - (int64_t)query_gap),
                                                  seq_pos::is_rev(chain->target_begin));
         //std::cerr << "target begin " << seq_pos::to_string(target_begin) << std::endl;
+        //std::cerr << "target end " << seq_pos::to_string(chain->target_end) << std::endl;
         if (query_begin >= chain->query_end()) continue;
         alignment_t aln
             = align(
