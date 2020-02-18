@@ -48,7 +48,10 @@ std::string map_seq(
     const gyeet_index_t& index,
     const uint64_t& max_chain_gap,
     const double& mismatch_rate,
-    const uint64_t& align_best_n);
+    const uint64_t& align_best_n,
+    const bool& write_alignments,
+    const bool& write_chains,
+    const bool& write_superchains);
 
 void worker_thread(
     uint64_t tid,
@@ -59,7 +62,10 @@ void worker_thread(
     const gyeet_index_t& index,
     uint64_t max_chain_gap,
     double mismatch_rate,
-    uint64_t align_best_n);
+    uint64_t align_best_n,
+    bool write_alignment,
+    bool write_chains,
+    bool write_superchains);
 
 void map_reads(
     const std::vector<std::string>& input_files,
@@ -67,6 +73,10 @@ void map_reads(
     const uint64_t& max_chain_gap,
     const double& mismatch_rate,
     const uint64_t& align_best_n,
-    const uint64_t& nthreads);
+    const uint64_t& nthreads,
+    const bool& write_alignment,
+    const bool& write_chains,
+    const bool& write_superchains);
+
 
 }

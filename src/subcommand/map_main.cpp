@@ -31,6 +31,9 @@ int main_map(int argc, char** argv) {
     args::ValueFlag<uint64_t> max_gap_length(parser, "N", "maximum gap length in chaining", {'G', "max-gap-length"});
     args::ValueFlag<double> max_mismatch_rate(parser, "FLOAT", "maximum allowed mismatch rate (default 0.1)", {'r', "max-mismatch-rate"});
     args::ValueFlag<uint64_t> align_best_n(parser, "N", "align the best N superchains", {'n', "align-best-n"});
+    args::Flag write_chains(parser, "bool", "write chains for each alignment", {'C', "write-chains"});
+    args::Flag write_superchains(parser, "bool", "write superchains for each alignment", {'S', "write-superchains"});
+    args::Flag dont_align(parser, "bool", "don't align, just chain", {'D', "dont-align"});
     args::ValueFlag<uint64_t> threads(parser, "N", "number of threads to use", {'t', "threads"});
     
     try {
@@ -84,7 +87,10 @@ int main_map(int argc, char** argv) {
                   max_gap,
                   mismatch_rate,
                   best_n,
-                  n_threads);
+                  n_threads,
+                  !args::get(dont_align),
+                  args::get(write_chains),
+                  args::get(write_superchains));
     } else if (!args::get(query_seq).empty()) {
         const std::string& query = args::get(query_seq);
         auto anchors = anchors_for_query(index,

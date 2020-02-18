@@ -102,7 +102,10 @@ std::string map_seq(
     const gyeet_index_t& index,
     const uint64_t& max_chain_gap,
     const double& mismatch_rate,
-    const uint64_t& align_best_n) {
+    const uint64_t& align_best_n,
+    const bool& write_alignments,
+    const bool& write_chains,
+    const bool& write_superchains) {
 
     auto anchors = anchors_for_query(index,
                                      query.c_str(),
@@ -112,25 +115,31 @@ std::string map_seq(
                                max_chain_gap,
                                mismatch_rate);
     std::stringstream ss;
-    for (auto& chain : query_chains) {
-        write_chain_gaf(ss, chain, index, name, query.length());
+    if (write_chains) {
+        for (auto& chain : query_chains) {
+            write_chain_gaf(ss, chain, index, name, query.length());
+        }
     }
     auto query_superchains = superchains(query_chains, index.kmer_length, mismatch_rate);
-    for (auto& superchain : query_superchains) {
-        write_superchain_gaf(ss, superchain, index, name, query.length());
+    if (write_superchains) {
+        for (auto& superchain : query_superchains) {
+            write_superchain_gaf(ss, superchain, index, name, query.length());
+        }
     }
     uint64_t up_to = std::min(align_best_n, (uint64_t)query_superchains.size());
-    for (uint64_t i = 0; i < up_to; ++i) {
-        auto& superchain = query_superchains[i];
-        alignment_t aln = superalign(
-            name,
-            query.length(),
-            query.c_str(),
-            superchain,
-            index,
-            index.kmer_length,
-            mismatch_rate);
-        write_alignment_gaf(ss, aln, index);
+    if (write_alignments) {
+        for (uint64_t i = 0; i < up_to; ++i) {
+            auto& superchain = query_superchains[i];
+            alignment_t aln = superalign(
+                name,
+                query.length(),
+                query.c_str(),
+                superchain,
+                index,
+                index.kmer_length,
+                mismatch_rate);
+            write_alignment_gaf(ss, aln, index);
+        }
     }
     return ss.str();
 }
@@ -144,7 +153,10 @@ void worker_thread(
     const gyeet_index_t& index,
     uint64_t max_chain_gap,
     double mismatch_rate,
-    uint64_t align_best_n) {
+    uint64_t align_best_n,
+    bool write_alignment,
+    bool write_chains,
+    bool write_superchains) {
 
     is_working.store(true);
     while (true) {
@@ -160,7 +172,10 @@ void worker_thread(
                             index,
                             max_chain_gap,
                             mismatch_rate,
-                            align_best_n));
+                            align_best_n,
+                            write_alignment,
+                            write_chains,
+                            write_superchains));
             gaf_queue.push(gaf_rec);
             delete rec;
         } else {
@@ -176,7 +191,10 @@ void map_reads(
     const uint64_t& max_chain_gap,
     const double& mismatch_rate,
     const uint64_t& align_best_n,
-    const uint64_t& nthreads) {
+    const uint64_t& nthreads,
+    const bool& write_alignment,
+    const bool& write_chains,
+    const bool& write_superchains) {
 
     seq_atomic_queue_t seq_queue;
     gaf_atomic_queue_t gaf_queue;
@@ -202,7 +220,10 @@ void map_reads(
                              std::ref(index),
                              max_chain_gap,
                              mismatch_rate,
-                             align_best_n);
+                             align_best_n,
+                             write_alignment,
+                             write_chains,
+                             write_superchains);
     }
 
     reader.join();
