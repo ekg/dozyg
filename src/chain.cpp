@@ -29,6 +29,43 @@ anchors_for_query(
     return anchors;
 }
 
+void chain_t::compute_boundaries(const uint64_t& seed_length, const double& mismatch_rate) {
+    // find the longest contiguous range covered by the chain
+    // where the size is no more than some function of our seed_length * number of anchors * 1+mismatch_rate
+    /*
+    for (auto& anchor : anchors) {
+        std::cout << "\"" << &anchor << "\" "
+                  << "[shape=box label=\"" << "score=" << anchor->max_chain_score << ","
+                  << "(" << seq_pos::to_string(anchor->query_begin) << ".."
+                  << seq_pos::to_string(anchor->query_end) << "),"
+                  << "(" << seq_pos::to_string(anchor->target_begin) << ".."
+                  << seq_pos::to_string(anchor->target_end) << ")\"];" << std::endl;
+    }
+    */
+    // find the inner boundaries
+    const seq_pos_t& first_target_end = anchors.front()->target_end;
+    const seq_pos_t& last_target_begin = anchors.back()->target_begin;
+    // can we linearly extend to the start, end?
+
+    const seq_pos_t& first_target_begin = anchors.front()->target_begin;
+    const seq_pos_t& last_target_end = anchors.back()->target_end;
+    //if (first_target_begin < last_target_end) {
+    if (seq_pos::is_rev(first_target_begin) == seq_pos::is_rev(last_target_end) &&
+        first_target_begin < last_target_end && score * (1+mismatch_rate) > last_target_end - first_target_begin) {
+        target_begin = first_target_begin;
+        target_end = last_target_end;
+    } else if (seq_pos::is_rev(first_target_end) == seq_pos::is_rev(last_target_begin)
+               && target_begin < target_end) {
+        target_begin = first_target_end;
+        target_end = last_target_begin;
+    } else {
+        // kill chains with a single anchor that jumps nonlinearly
+        score = -std::numeric_limits<double>::max();
+    }
+    //std::cerr << "target begin " << seq_pos::to_string(target_begin) << std::endl;
+    //std::cerr << "target end " << seq_pos::to_string(target_end) << std::endl;
+}
+
 std::vector<chain_t>
 chains(std::vector<anchor_t>& anchors,
        const uint64_t& seed_length,

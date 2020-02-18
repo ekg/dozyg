@@ -45,30 +45,7 @@ struct chain_t {
     // query boundaries are fixed
     seq_pos_t query_begin(void) const { return anchors.front()->query_begin; }
     seq_pos_t query_end(void) const { return anchors.back()->query_end; }
-    void compute_boundaries(const uint64_t& seed_length, const double& mismatch_rate) {
-        // find the longest contiguous range covered by the chain
-        // where the size is no more than some function of our seed_length * number of anchors * 1+mismatch_rate
-        
-        // find the inner boundaries
-        auto& first_target_end = anchors.front()->target_end;
-        auto& last_target_begin = anchors.back()->target_begin;
-        // can we linearly extend to the start, end?
-        auto& first_target_begin = anchors.front()->target_begin;
-        auto& last_target_end = anchors.back()->target_end;
-        //if (first_target_begin < last_target_end) {
-        if (seq_pos::is_rev(first_target_begin) == seq_pos::is_rev(last_target_end) &&
-            first_target_begin < last_target_end && score * (1+mismatch_rate) > last_target_end - first_target_begin) {
-            target_begin = first_target_begin;
-            target_end = last_target_end;
-        } else if (seq_pos::is_rev(first_target_end) == seq_pos::is_rev(last_target_begin)
-                   && target_begin < target_end) {
-            target_begin = first_target_end;
-            target_end = last_target_begin;
-        } else {
-            // kill chains with a single anchor that jumps nonlinearly
-            score = -std::numeric_limits<double>::max();
-        }
-    }
+    void compute_boundaries(const uint64_t& seed_length, const double& mismatch_rate);
 };
 
 struct chain_node_t {

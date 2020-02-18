@@ -169,7 +169,7 @@ alignment_t align(
         target_length = query_length;
     }
     */
-    std::cerr << "query start " << seq_pos::offset(query_pos) << " length " << query_length << " target start " << seq_pos::to_string(target_pos) << " length " << target_length << std::endl;
+    //std::cerr << "query start " << seq_pos::offset(query_pos) << " length " << query_length << " target start " << seq_pos::to_string(target_pos) << " length " << target_length << std::endl;
 //" last anchor begin " <<  seq_pos::to_string(chain.anchors.back()->target_begin) << " length " << target_length << std::endl;
     EdlibAlignResult result = edlibAlign(query_begin, query_length, target_begin, target_length,
                                          edlibNewAlignConfig(max_edit_distance, EDLIB_MODE_NW, EDLIB_TASK_PATH, NULL, 0));
@@ -493,9 +493,13 @@ alignment_t superalign(
             //extend_cigar(superaln.cigar, query_gap, 'I');
         }
         */
+        if (-query_gap > chain->target_end - chain->target_begin) continue;
         seq_pos_t query_begin = chain->query_begin() - query_gap;
+        assert(query_begin < chain->query_end());
+        //std::cerr << "chain->target_begin " << seq_pos::to_string(chain->target_begin)  << std::endl;
         seq_pos_t target_begin = seq_pos::encode(std::max((int64_t)0, (int64_t)seq_pos::offset(chain->target_begin) - (int64_t)query_gap),
                                                  seq_pos::is_rev(chain->target_begin));
+        //std::cerr << "target begin " << seq_pos::to_string(target_begin) << std::endl;
         if (query_begin >= chain->query_end()) continue;
         alignment_t aln
             = align(
