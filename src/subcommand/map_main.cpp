@@ -28,7 +28,7 @@ int main_map(int argc, char** argv) {
     args::ValueFlag<std::string> idx_in_file(parser, "FILE", "load the index from this prefix", {'i', "index"});
     args::ValueFlagList<std::string> input_files(parser, "FILE", "input file, either FASTA or FASTQ, optionally gzipped, multiple allowed", {'f', "input-file"});
     args::ValueFlag<std::string> query_seq(parser, "SEQ", "query one sequence", {'s', "one-sequence"});
-    args::ValueFlag<uint64_t> max_gap_length(parser, "N", "maximum gap length in chaining", {'G', "max-gap-length"});
+    args::ValueFlag<uint64_t> max_gap_length(parser, "N", "maximum gap length in chaining (default 1000)", {'G', "max-gap-length"});
     args::ValueFlag<double> max_mismatch_rate(parser, "FLOAT", "maximum allowed mismatch rate (default 0.1)", {'r', "max-mismatch-rate"});
     args::ValueFlag<uint64_t> align_best_n(parser, "N", "align the best N superchains", {'n', "align-best-n"});
     args::Flag write_chains(parser, "bool", "write chains for each alignment", {'C', "write-chains"});
