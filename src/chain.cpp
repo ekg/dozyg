@@ -92,6 +92,7 @@ chains(std::vector<anchor_t>& anchors,
         for (int64_t j = i-1; j >= min_j; --j) {
             anchor_t& anchor_j = anchors[j];
             //std::cerr << "anchor_j " << anchor_j.query_begin << ".." << anchor_j.query_end << std::endl;
+            if (anchor_i.target_end - anchor_j.target_end > max_gap) break;
             double proposed_score = score_anchors(anchor_j,
                                                   anchor_i,
                                                   seed_length,
@@ -293,7 +294,6 @@ superchains(std::vector<chain_t>& chains,
             }
         }
     }
-
     /*
     std::ofstream out("superchains.dot");
     out << "digraph G {" << std::endl;
@@ -312,7 +312,6 @@ superchains(std::vector<chain_t>& chains,
     out << "}" << std::endl;
     out.close();
     */
-
     // collect superchains
     std::vector<superchain_t> superchains;
     int64_t i = chain_nodes.size()-1;
@@ -369,7 +368,8 @@ double score_chain_nodes(const chain_node_t& a,
     // ignore if the a chain is contained in b
     if (a.chain->anchors.back()->query_end
         > b.chain->anchors.front()->query_begin + kmer_length) {
-        return -std::numeric_limits<double>::max();
+        //return -std::numeric_limits<double>::max();
+        return a.max_superchain_score;
     } else {
         // otherwise, add scores
         return a.max_superchain_score + b.chain->score;

@@ -128,6 +128,7 @@ std::string map_seq(
     }
     uint64_t up_to = std::min(align_best_n, (uint64_t)query_superchains.size());
     if (write_alignments) {
+        //std::cerr << "aligning " << name << std::endl;
         for (uint64_t i = 0; i < up_to; ++i) {
             auto& superchain = query_superchains[i];
             alignment_t aln = superalign(
@@ -137,7 +138,8 @@ std::string map_seq(
                 superchain,
                 index,
                 index.kmer_length,
-                mismatch_rate);
+                mismatch_rate,
+                max_chain_gap);
             write_alignment_gaf(ss, aln, index);
         }
     }

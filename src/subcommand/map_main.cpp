@@ -110,7 +110,8 @@ int main_map(int argc, char** argv) {
                 superchain,
                 index,
                 index.kmer_length,
-                mismatch_rate);
+                mismatch_rate,
+                max_gap);
             write_alignment_gaf(std::cout, aln, index);
         }
     }

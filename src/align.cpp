@@ -137,6 +137,7 @@ alignment_t align(
     const gyeet_index_t& index,
     const uint64_t& extra_bp,
     const uint64_t& max_edit_distance,
+    const bool& global_alignment,
     const seq_pos_t& query_pos,
     const seq_pos_t& query_length,
     const seq_pos_t& target_pos,
@@ -171,8 +172,9 @@ alignment_t align(
     */
     //std::cerr << "query start " << seq_pos::offset(query_pos) << " length " << query_length << " target start " << seq_pos::to_string(target_pos) << " length " << target_length << std::endl;
 //" last anchor begin " <<  seq_pos::to_string(chain.anchors.back()->target_begin) << " length " << target_length << std::endl;
+    auto edlib_mode = (global_alignment ? EDLIB_MODE_NW : EDLIB_MODE_HW);
     EdlibAlignResult result = edlibAlign(query_begin, query_length, target_begin, target_length,
-                                         edlibNewAlignConfig(max_edit_distance, EDLIB_MODE_NW, EDLIB_TASK_PATH, NULL, 0));
+                                         edlibNewAlignConfig(max_edit_distance, edlib_mode, EDLIB_TASK_PATH, NULL, 0));
 
     //std::cerr << "numlocs " << result.numLocations << std::endl;
 
@@ -388,6 +390,7 @@ void graph_relativize(
     cigar_t curr_cigar;
     for (uint64_t i = 0; i < alignmentLength; i++) {
         // determine if we need to update our path
+        //std::cerr << "Target_pos " << seq_pos::to_string(target_pos) << std::endl;
         handle_t handle = index.get_handle_at(target_pos);
         if (i == 0) {
             curr = handle;
@@ -447,12 +450,16 @@ void graph_relativize(
     }
 }
 
-uint64_t edit_distance_estimate(const chain_t& chain, const double& max_mismatch_rate) {
+uint64_t edit_distance_estimate(
+    const chain_t& chain,
+    const double& max_mismatch_rate,
+    const int64_t& query_offset,
+    const int64_t& target_offset) {
     if (chain.anchors.empty()) {
         return 0;
     } else {
-        int64_t query_length = chain.query_end() - chain.query_begin();
-        int64_t target_length = chain.target_end - chain.target_begin;
+        int64_t query_length = chain.query_end() - chain.query_begin(); // - query_offset;
+        int64_t target_length = chain.target_end - chain.target_begin; // - target_offset;
         //int64_t query_length = chain.anchors.back()->query_end - chain.anchors.front()->query_end;
         //int64_t target_length = chain.anchors.back()->target_end - chain.anchors.front()->target_end;
         return std::abs(query_length - target_length) + std::ceil(query_length * max_mismatch_rate);
@@ -466,42 +473,55 @@ alignment_t superalign(
     const superchain_t& superchain,
     const gyeet_index_t& index,
     const uint64_t& extra_bp,
-    const double& max_mismatch_rate) {
+    const double& max_mismatch_rate,
+    const uint64_t& max_gap) {
 
     alignment_t superaln;
     superaln.query_name = query_name;
     superaln.query_length = query_total_length;
-    superaln.query_begin = (superchain.chains.size() ? seq_pos::offset(superchain.chains.front()->query_begin()) : 0);
-    superaln.query_end = (superchain.chains.size() ? seq_pos::offset(superchain.chains.back()->query_end()) : 0);
+    superaln.query_begin = 0; //(superchain.chains.size() ? seq_pos::offset(superchain.chains.front()->query_begin()) : 0);
+    superaln.query_end = 0; //(superchain.chains.size() ? seq_pos::offset(superchain.chains.back()->query_end()) : 0);
     superaln.mapping_quality = std::numeric_limits<double>::max();
     superaln.is_secondary = superchain.is_secondary;
     //uint64_t flanking_bp = std::ceil(index.kmer_length * (1 + max_mismatch_rate));
     for (uint64_t i = 0; i < superchain.chains.size(); ++i) {
         auto& chain = superchain.chains[i];
-        // what's the gap from the last chain on the query?
         int64_t query_gap = (i > 0 ?
                              chain->query_begin() - superchain.chains[i-1]->query_end()
                              : chain->query_begin());
-        //std::cerr << "query gap " << query_gap << std::endl;
-        /*
-        // tack on an insertion for unaligned intervening sequence
-        if (query_gap < 0) {
-            std::cerr << "[gyeet map] superchains overlap in query" << std::endl;
-            assert(false);
-            exit(1);
-        } else if (query_gap > 0) {
-            //extend_cigar(superaln.cigar, query_gap, 'I');
-        }
-        */
-        if (-query_gap > chain->target_end - chain->target_begin) continue;
+        //query_gap = std::min((int64_t)max_gap, query_gap);
         seq_pos_t query_begin = chain->query_begin() - query_gap;
-        assert(query_begin < chain->query_end());
-        //std::cerr << "chain->target_begin " << seq_pos::to_string(chain->target_begin)  << std::endl;
-        seq_pos_t target_begin = seq_pos::encode(std::max((int64_t)0, (int64_t)seq_pos::offset(chain->target_begin) - (int64_t)query_gap),
+        int64_t query_end_extension = (i == superchain.chains.size()-1 ?
+                                       query_total_length - chain->query_end()
+                                       : 0);
+        //query_end_extension = std::min((int64_t)max_gap, query_end_extension);
+        seq_pos_t query_end = chain->query_end() + query_end_extension;
+        //assert(query_begin < chain->query_end());
+        int64_t target_begin_offset = (query_gap > 0 ? (int64_t)std::ceil((double)query_gap * (1+max_mismatch_rate)) : 0);
+        int64_t target_end_offset = (query_end_extension > 0 ? (int64_t)std::ceil((double)query_end_extension * (1+max_mismatch_rate)) : 0);
+        seq_pos_t target_begin = seq_pos::encode(std::max((int64_t)0,
+                                                          (int64_t)seq_pos::offset(chain->target_begin) - target_begin_offset),
                                                  seq_pos::is_rev(chain->target_begin));
-        //std::cerr << "target begin " << seq_pos::to_string(target_begin) << std::endl;
-        //std::cerr << "target end " << seq_pos::to_string(chain->target_end) << std::endl;
-        if (query_begin >= chain->query_end()) continue;
+        seq_pos_t target_end = seq_pos::encode(std::min((int64_t)index.seq_length,
+                                                        (int64_t)seq_pos::offset(chain->target_end) + target_end_offset),
+                                               seq_pos::is_rev(chain->target_end));
+        uint64_t edit_distance = edit_distance_estimate(*chain, max_mismatch_rate, query_gap+query_end_extension, target_begin_offset+target_end_offset);
+
+        if (target_begin >= target_end
+            || query_begin >= query_end) continue;
+
+        bool use_global = true; //(double)(query_end - query_begin) / (double)(chain->query_end() - chain->query_begin()) < 1.5;
+/*
+        std::cerr << "query gap " << query_gap << std::endl;
+        std::cerr << "query end extension " << query_end_extension << std::endl;
+        std::cerr << "query begin " << query_begin << std::endl;
+        std::cerr << "query end " << query_end << std::endl;
+        std::cerr << "target begin " << seq_pos::to_string(target_begin) << std::endl;
+        std::cerr << "target begin offset " << target_begin_offset << std::endl;
+        std::cerr << "target end " << seq_pos::to_string(target_end) << std::endl;
+        std::cerr << "target end offset " << target_end_offset << std::endl;
+        std::cerr << "edit distance " << edit_distance << std::endl;
+*/
         alignment_t aln
             = align(
                 query_name,
@@ -510,11 +530,13 @@ alignment_t superalign(
                 *chain,
                 index,
                 extra_bp,
-                edit_distance_estimate(*chain, max_mismatch_rate),
+                edit_distance,
+                use_global,
                 query_begin,
-                chain->query_end() - query_begin,
+                query_end - query_begin,
                 target_begin,
-                chain->target_end - target_begin);
+                target_end - target_begin);
+        //std::cerr << "align done" << std::endl;
         // extend the superalignment
         // add deletions for distance to the target start
         if (aln.first_handle_from_begin > 0) {

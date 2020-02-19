@@ -66,6 +66,7 @@ alignment_t align(
     const gyeet_index_t& index,
     const uint64_t& extra_bp,
     const uint64_t& max_edit_distance,
+    const bool& global_alignment,
     const seq_pos_t& query_pos,
     const seq_pos_t& query_length,
     const seq_pos_t& target_pos,
@@ -103,7 +104,8 @@ alignment_t superalign(
     const superchain_t& superchain,
     const gyeet_index_t& index,
     const uint64_t& extra_bp,
-    const double& max_mismatch_rate);
+    const double& max_mismatch_rate,
+    const uint64_t& max_gap);
 
 std::string alignment_cigar(
     const unsigned char* const alignment,
