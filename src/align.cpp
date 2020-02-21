@@ -481,7 +481,7 @@ alignment_t superalign(
     superaln.query_length = query_total_length;
     superaln.query_begin = 0; //(superchain.chains.size() ? seq_pos::offset(superchain.chains.front()->query_begin()) : 0);
     // XXX currently we're forcing a global alignment
-    superaln.query_end = query_total_length; //(superchain.chains.size() ? seq_pos::offset(superchain.chains.back()->query_end()) : 0);
+    superaln.query_end = seq_pos::encode(query_total_length, false); //(superchain.chains.size() ? seq_pos::offset(superchain.chains.back()->query_end()) : 0);
     superaln.mapping_quality = std::numeric_limits<double>::max();
     superaln.is_secondary = superchain.is_secondary;
     //uint64_t flanking_bp = std::ceil(index.kmer_length * (1 + max_mismatch_rate));
