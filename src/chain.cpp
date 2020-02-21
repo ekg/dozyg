@@ -93,7 +93,7 @@ chains(std::vector<anchor_t>& anchors,
         for (int64_t j = i-1; j >= min_j; --j) {
             anchor_t& anchor_j = anchors[j];
             //std::cerr << "anchor_j " << anchor_j.query_begin << ".." << anchor_j.query_end << std::endl;
-            if (anchor_i.target_end - anchor_j.target_end > max_gap) break;
+            //if (anchor_i.target_end - anchor_j.target_end > max_gap) break;
             double proposed_score = score_anchors(anchor_j,
                                                   anchor_i,
                                                   seed_length,
@@ -236,12 +236,12 @@ double score_anchors(const anchor_t& a,
         uint64_t target_length = std::min(b.target_begin - a.target_begin,
                                           b.target_end - a.target_end);
         //std::cerr << "query_length " << query_length << " target_length " << target_length << std::endl;
-        if (std::max(query_length, target_length) > max_gap) {
+        uint64_t gap_length = std::abs((int64_t)query_length - (int64_t)target_length);
+        if (gap_length > max_gap) { //std::max(query_length, target_length) > max_gap) {
             return -std::numeric_limits<double>::max();
             //return std::numeric_limits<double>::min();
         } else {
             //std::cerr << "query_length " << query_length << " target_length " << target_length << std::endl;
-            uint64_t gap_length = std::abs((int64_t)query_length - (int64_t)target_length);
             double gap_cost = gap_length == 0 ? 0
                 : 0.01 * seed_length * gap_length + 0.5 * log2(gap_length);
             uint64_t match_length = std::min(std::min(query_length,
