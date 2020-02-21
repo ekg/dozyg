@@ -102,6 +102,8 @@ std::string map_seq(
     const gyeet_index_t& index,
     const uint64_t& max_chain_gap,
     const double& mismatch_rate,
+    const uint64_t& chain_min_n_anchors,
+    const double& chain_overlap_max,
     const uint64_t& align_best_n,
     const bool& write_alignments,
     const bool& write_chains,
@@ -113,14 +115,15 @@ std::string map_seq(
     auto query_chains = chains(anchors,
                                index.kmer_length,
                                max_chain_gap,
-                               mismatch_rate);
+                               mismatch_rate,
+                               chain_min_n_anchors);
     std::stringstream ss;
     if (write_chains) {
         for (auto& chain : query_chains) {
             write_chain_gaf(ss, chain, index, name, query.length());
         }
     }
-    auto query_superchains = superchains(query_chains, index.kmer_length, mismatch_rate);
+    auto query_superchains = superchains(query_chains, index.kmer_length, mismatch_rate, chain_overlap_max);
     if (write_superchains) {
         for (auto& superchain : query_superchains) {
             write_superchain_gaf(ss, superchain, index, name, query.length());
@@ -155,6 +158,8 @@ void worker_thread(
     const gyeet_index_t& index,
     uint64_t max_chain_gap,
     double mismatch_rate,
+    uint64_t chain_min_n_anchors,
+    double chain_overlap_max,
     uint64_t align_best_n,
     bool write_alignment,
     bool write_chains,
@@ -174,6 +179,8 @@ void worker_thread(
                             index,
                             max_chain_gap,
                             mismatch_rate,
+                            chain_min_n_anchors,
+                            chain_overlap_max,
                             align_best_n,
                             write_alignment,
                             write_chains,
@@ -192,6 +199,8 @@ void map_reads(
     const gyeet_index_t& index,
     const uint64_t& max_chain_gap,
     const double& mismatch_rate,
+    const uint64_t& chain_min_n_anchors,
+    const double& chain_overlap_max,
     const uint64_t& align_best_n,
     const uint64_t& nthreads,
     const bool& write_alignment,
@@ -222,6 +231,8 @@ void map_reads(
                              std::ref(index),
                              max_chain_gap,
                              mismatch_rate,
+                             chain_min_n_anchors,
+                             chain_overlap_max,
                              align_best_n,
                              write_alignment,
                              write_chains,

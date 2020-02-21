@@ -28,8 +28,10 @@ int main_map(int argc, char** argv) {
     args::ValueFlag<std::string> idx_in_file(parser, "FILE", "load the index from this prefix", {'i', "index"});
     args::ValueFlagList<std::string> input_files(parser, "FILE", "input file, either FASTA or FASTQ, optionally gzipped, multiple allowed", {'f', "input-file"});
     args::ValueFlag<std::string> query_seq(parser, "SEQ", "query one sequence", {'s', "one-sequence"});
-    args::ValueFlag<uint64_t> max_gap_length(parser, "N", "maximum gap length in chaining (default 1000)", {'G', "max-gap-length"});
+    args::ValueFlag<uint64_t> max_gap_length(parser, "N", "maximum gap length in chaining (default 1000)", {'g', "max-gap-length"});
     args::ValueFlag<double> max_mismatch_rate(parser, "FLOAT", "maximum allowed mismatch rate (default 0.1)", {'r', "max-mismatch-rate"});
+    args::ValueFlag<double> chain_overlap(parser, "FLOAT", "maximum allowed query overlap between chains superchains (default 0.75)", {'c', "chain-overlap-max"});
+    args::ValueFlag<uint64_t> chain_min_anchors(parser, "N", "minimum number of anchors in a chain (3)", {'a', "chain-min-n-anchors"});
     args::ValueFlag<uint64_t> align_best_n(parser, "N", "align the best N superchains", {'n', "align-best-n"});
     args::Flag write_chains(parser, "bool", "write chains for each alignment", {'C', "write-chains"});
     args::Flag write_superchains(parser, "bool", "write superchains for each alignment", {'S', "write-superchains"});
@@ -75,6 +77,14 @@ int main_map(int argc, char** argv) {
         ? args::get(max_mismatch_rate)
         : 0.2;
 
+    double chain_overlap_max = args::get(chain_overlap)
+        ? args::get(chain_overlap)
+        : 0.75;
+
+    uint64_t chain_min_n_anchors = args::get(chain_min_anchors)
+        ? args::get(chain_min_anchors)
+        : 3;
+
     uint64_t best_n = args::get(align_best_n) ? args::get(align_best_n) : 1;
 
     uint64_t n_threads = args::get(threads) ? args::get(threads) : 1;
@@ -86,6 +96,8 @@ int main_map(int argc, char** argv) {
                   index,
                   max_gap,
                   mismatch_rate,
+                  chain_min_n_anchors,
+                  chain_overlap_max,
                   best_n,
                   n_threads,
                   !args::get(dont_align),
@@ -99,8 +111,12 @@ int main_map(int argc, char** argv) {
         auto query_chains = chains(anchors,
                                    kmer_length,
                                    max_gap,
-                                   mismatch_rate);
-        auto query_superchains = superchains(query_chains, kmer_length, mismatch_rate);
+                                   mismatch_rate,
+                                   chain_min_n_anchors);
+        auto query_superchains = superchains(query_chains,
+                                             kmer_length,
+                                             mismatch_rate,
+                                             chain_overlap_max);
         std::string query_name = "unknown";
         for (auto& superchain : query_superchains) {
             alignment_t aln = superalign(

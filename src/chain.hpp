@@ -61,6 +61,7 @@ chains(std::vector<anchor_t>& anchors,
        const uint64_t& seed_length,
        const uint64_t& max_gap,
        const double& mismatch_rate,
+       const uint64_t& chain_min_n_anchors,
        const uint64_t bandwidth = 50,
        const double secondary_chain_threshold = 0.5,
        const double max_mapq = 60);
@@ -89,10 +90,12 @@ std::vector<superchain_t>
 superchains(std::vector<chain_t>& chains,
             const uint64_t& kmer_length,
             const double& mismatch_rate,
+            const double& chain_overlap_max,
             const uint64_t bandwidth = 1000);
 
 double score_chain_nodes(const chain_node_t& a,
                          const chain_node_t& b,
-                         const uint64_t& kmer_length);
+                         const uint64_t& kmer_length,
+                         const double& overlap_max);
 
 }
