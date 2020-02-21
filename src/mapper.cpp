@@ -129,6 +129,9 @@ std::string map_seq(
             write_superchain_gaf(ss, superchain, index, name, query.length());
         }
     }
+    if (query_superchains.empty()) {
+        query_superchains.emplace_back();
+    }
     uint64_t up_to = std::min(align_best_n, (uint64_t)query_superchains.size());
     if (write_alignments) {
         //std::cerr << "aligning " << name << std::endl;
