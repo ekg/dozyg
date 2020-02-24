@@ -177,6 +177,7 @@ alignment_t align(
                                          edlibNewAlignConfig(max_edit_distance, edlib_mode, EDLIB_TASK_PATH, NULL, 0));
 
     //std::cerr << "numlocs " << result.numLocations << std::endl;
+    //std::cerr << "seq length " << index.seq_length << std::endl;
 
     alignment_t aln;
     aln.query_name = query_name;
@@ -389,6 +390,7 @@ void graph_relativize(
     handle_t curr = max_handle();
     cigar_t curr_cigar;
     for (uint64_t i = 0; i < alignmentLength; i++) {
+        //std::cerr << "alignment step " << i << " of " << alignmentLength << std::endl;
         // determine if we need to update our path
         //std::cerr << "Target_pos " << seq_pos::to_string(target_pos) << std::endl;
         handle_t handle = index.get_handle_at(target_pos);
