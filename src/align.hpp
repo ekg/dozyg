@@ -58,7 +58,7 @@ void write_alignment_gaf(
     const alignment_t& aln,
     const gyeet_index_t& index);
 
-alignment_t align(
+alignment_t align_edlib(
     const std::string& query_name,
     const uint64_t& query_total_length,
     const char* query,

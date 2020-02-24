@@ -129,7 +129,7 @@ void write_alignment_gaf(
 // apply global alignment within these regions to obtain sequence to graph sequence mapping
 // use this to determine the correct graph path (and check it)
 // re-score using the graph topology
-alignment_t align(
+alignment_t align_edlib(
     const std::string& query_name,
     const uint64_t& query_total_length,
     const char* query,
@@ -526,7 +526,7 @@ alignment_t superalign(
         std::cerr << "edit distance " << edit_distance << std::endl;
 */
         alignment_t aln
-            = align(
+            = align_edlib(
                 query_name,
                 query_total_length,
                 query,
