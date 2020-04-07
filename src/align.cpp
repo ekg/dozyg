@@ -124,6 +124,85 @@ void write_alignment_gaf(
         << "cg:Z:" << aln.cigar << std::endl;
 }
 
+alignment_t align_dozeu(
+    const std::string& query_name,
+    const uint64_t& query_total_length,
+    const char* query,
+    const chain_t& chain,
+    const gyeet_index_t& index,
+    const uint64_t& extra_bp,
+    const uint64_t& max_edit_distance,
+    const bool& global_alignment,
+    const seq_pos_t& query_pos,
+    const uint64_t& query_length,
+    const seq_pos_t& target_pos,
+    const uint64_t& target_length) {
+
+    /* init score matrix and memory arena */
+	int8_t const M = 2, X = -3, GI = 5, GE = 1;		/* match, mismatch, gap open, and gap extend; g(k) = GI + k + GE for k-length gap */
+	int8_t const xdrop_threshold = 70, full_length_bonus = 10;
+	int8_t const score_matrix[16] = {
+	/*              ref-side  */
+	/*             A  C  G  T */
+	/*        A */ M, X, X, X,
+	/* query- C */ X, M, X, X,
+	/*  side  G */ X, X, M, X,
+	/*        T */ X, X, X, M
+	};
+	struct dz_s *dz = dz_init(
+		score_matrix,
+		GI, GE,
+		xdrop_threshold,
+		full_length_bonus
+	);
+
+    const char* query_begin = query + seq_pos::offset(query_pos);
+
+    struct dz_query_s const *q = dz_pack_query_forward(
+        dz,
+	    query_begin,
+	    query_length
+	);
+
+    uint64_t node_count = 0;
+    seq_pos_t target_end = target_pos + target_length;
+    seq_pos_t i = target_pos;
+    while (i < target_end) {
+        handle_t handle = index.get_handle_at(i);
+        seq_pos_t node_start = index.get_seq_pos(s);
+        uint64_t node_length = index.get_length(h);
+        i += node_length - (i - node_start);
+        ++node_count;
+    }
+
+    struct dz_forefront_s const *ff[node_count] = { 0 };
+    //const char* target_begin = index.get_target(target_pos);
+
+    // now walk across the subgraph
+    // and, when we've evaluated nodes in correct order, align using previously established forefronts
+    // we're going to force the alignment to treat the system as partially ordered
+    i = target_pos;
+    uint64_t j = 0;
+    while (i < target_end) {
+        handle_t handle = index.get_handle_at(i);
+        seq_pos_t node_start = index.get_seq_pos(s);
+        uint64_t node_length = index.get_length(h);
+        // determine the inbound nodes and if we have filled them, provide them here
+        // here make a temporary vector of pointers to forefronts
+        follow_edges(
+            handle, true,
+            [&](const handle_t& h) {
+                // need to be able to map into our ff vector
+                // and know if we've filled it
+            });
+        // otherwise give the root
+        // ...
+        ff[j] = dz_extend(dz, q, &ff[0], 1, get_target(i), l, 1);
+        i += node_length - (i - node_start);
+        ++j;
+    }
+}
+
 // alignment
 // assume that chains are over linearized segments of the graph
 // apply global alignment within these regions to obtain sequence to graph sequence mapping

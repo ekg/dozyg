@@ -376,4 +376,34 @@ nid_t gyeet_index_t::get_id(const handle_t& h) const {
     return handle_rank(h) + 1;
 }
 
+void gyeet_index_t::follow_edges(
+    const handle_t& h,
+    bool go_left,
+    const std::function<void(const handle_t&)>& func) {
+    uint64_t i = handle_rank(h);
+    auto& node = node_ref[i];
+    auto& next_edge_idx = node_ref[i+1].edge_idx;
+    if (!handle_is_rev(h)) {
+        if (go_left) {
+            for (uint64_t j = node.edge_idx; j < node.edge_idx + node.count_prev; ++j) {
+                func(edges[j]);
+            }
+        } else {
+            for (uint64_t j = node.edge_idx + node.count_prev; j < next_edge_idx; ++j) {
+                func(edges[j]);
+            }
+        }
+    } else {
+        if (!go_left) {
+            for (uint64_t j = node.edge_idx; j < node.edge_idx + node.count_prev; ++j) {
+                func(flip_handle(edges[j]));
+            }
+        } else {
+            for (uint64_t j = node.edge_idx + node.count_prev; j < next_edge_idx; ++j) {
+                func(flip_handle(edges[j]));
+            }
+        }
+    }
+}
+
 }
