@@ -138,6 +138,7 @@ alignment_t align_dozeu(
     const seq_pos_t& target_pos,
     const uint64_t& target_length) {
 
+    /// XXXX todo move this outside so we only call dz_init once per thread
     /* init score matrix and memory arena */
 	int8_t const M = 2, X = -3, GI = 5, GE = 1;		/* match, mismatch, gap open, and gap extend; g(k) = GI + k + GE for k-length gap */
 	int8_t const xdrop_threshold = 70, full_length_bonus = 10;
@@ -177,6 +178,8 @@ alignment_t align_dozeu(
 
     struct dz_forefront_s const *ff[node_count] = { 0 };
     //const char* target_begin = index.get_target(target_pos);
+    // what's a good structure for tracking if we've filled a forefront?
+    // map seems heavyweight
 
     // now walk across the subgraph
     // and, when we've evaluated nodes in correct order, align using previously established forefronts
