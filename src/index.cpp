@@ -56,14 +56,14 @@ void gyeet_index_t::build(const HandleGraph& graph,
     std::string node_ref_filename = out_prefix + ".gyn";
     std::ofstream node_ref_f(node_ref_filename.c_str(), std::ios::binary | std::ios::trunc);
     uint64_t seq_idx = 0;
-    uint64_t ref_idx = 0;
+    //uint64_t ref_idx = 0;
     graph.for_each_handle(
         [&](const handle_t& h) {
             seq_bv[seq_idx] = 1;
             const std::string seq = graph.get_sequence(h);
             seq_fwd_f << seq;
             seq_rev_f << seq;
-            node_ref_t ref = { seq_idx, ref_idx++, 0 };
+            node_ref_t ref = { seq_idx, n_edges, 0 };
             graph.follow_edges(
                 h, true,
                 [&](const handle_t& p) {
@@ -78,11 +78,12 @@ void gyeet_index_t::build(const HandleGraph& graph,
                     edge_f.write(reinterpret_cast<char const*>(&n), sizeof(n));
                     ++n_edges;
                 });
+            //ref_idx = n_edges;
             seq_idx += seq.length();
         });
     {
         // write a marker reference, to simplify counting of edges
-        node_ref_t ref = { seq_idx, ref_idx, 0 };
+        node_ref_t ref = { seq_idx, n_edges, 0 };
         node_ref_f.write(reinterpret_cast<char const*>(&ref), sizeof(ref));
     }
     assert(seq_idx == seq_length);

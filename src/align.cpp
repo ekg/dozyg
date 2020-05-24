@@ -172,11 +172,13 @@ alignment_t align_dozeu(
         handle_t handle = index.get_handle_at(i);
         seq_pos_t node_start = index.get_seq_pos(handle);
         uint64_t node_length = index.get_length(handle);
-        i += node_length - (i - node_start);
+        size_t l = node_length - (i - node_start) - (i + node_length > target_end ? node_length - target_end : 0);
+        i += l;
         ++node_count;
     }
 
     struct dz_forefront_s const *ff[node_count] = { 0 };
+    std::cerr << "dz node_count " << node_count << std::endl;
     //const char* target_begin = index.get_target(target_pos);
     // what's a good structure for tracking if we've filled a forefront?
     // map seems heavyweight
@@ -200,6 +202,7 @@ alignment_t align_dozeu(
             [&](const handle_t& h) {
                 // need to be able to map into our ff vector
                 // and know if we've filled it
+                std::cerr << "looking back " << index.get_id(handle) << " towards " << index.get_id(h) << std::endl;
                 auto f = filled_ffs.find(h);
                 if (f != filled_ffs.end()) {
                     curr_ffs.push_back(f->second);
@@ -212,6 +215,10 @@ alignment_t align_dozeu(
         // ...
         // XXX TODO this needs to reflect the target end ... not sure if this is correct
         size_t l = node_length - (i - node_start) - (i + node_length > target_end ? node_length - target_end : 0);
+        if (curr_ffs.empty()) {
+            std::cerr << index.get_id(handle) << " has no inbound" << std::endl;
+            curr_ffs.push_back(*dz_root(dz));
+        }
         ff[j] = dz_extend(dz, // dz object
                           q,  // query object
                           (const dz_forefront_s**)&curr_ffs[0], // forefronts inbound
@@ -223,6 +230,28 @@ alignment_t align_dozeu(
         i += l; // increment our pointer
         ++j;
     }
+
+    /* detect max */
+	struct dz_forefront_s const *max = NULL;
+	for(size_t i = 0; i < node_count; i++) {
+		if(max == NULL || ff[i]->max > max->max) { max = ff[i]; }
+	}
+
+	/* traceback */
+	struct dz_alignment_s const *aln = dz_trace(
+		dz,
+		max
+	);
+
+    std::cerr << "ref_length(" << aln->ref_length << "), query_length(" << aln->query_length << "), score(" << aln->score << "), path(" << aln->path << ")" << std::endl;
+	for(size_t i = 0; i < aln->span_length; i++) {
+		struct dz_path_span_s const *s = &aln->span[i];
+        std::cerr << "node_id(" << s->id << "), subpath_length(" << s[1].offset - s[0].offset << "), subpath(" << std::string((char*)&aln->path[s->offset], s[1].offset - s[0].offset) << ")" << std::endl;
+	}
+
+    alignment_t _aln;
+    return _aln;
+
 }
 
 // alignment
@@ -640,6 +669,22 @@ alignment_t superalign(
                 query_end - query_begin,
                 target_begin,
                 target_end - target_begin);
+
+        alignment_t dz_aln
+            = align_dozeu(
+                query_name,
+                query_total_length,
+                query,
+                *chain,
+                index,
+                extra_bp,
+                edit_distance,
+                use_global,
+                query_begin,
+                query_end - query_begin,
+                target_begin,
+                target_end - target_begin);
+        
         //std::cerr << "align done" << std::endl;
         // extend the superalignment
         // add deletions for distance to the target start
