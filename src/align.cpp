@@ -170,8 +170,8 @@ alignment_t align_dozeu(
     seq_pos_t i = target_pos;
     while (i < target_end) {
         handle_t handle = index.get_handle_at(i);
-        seq_pos_t node_start = index.get_seq_pos(s);
-        uint64_t node_length = index.get_length(h);
+        seq_pos_t node_start = index.get_seq_pos(handle);
+        uint64_t node_length = index.get_length(handle);
         i += node_length - (i - node_start);
         ++node_count;
     }
@@ -180,6 +180,8 @@ alignment_t align_dozeu(
     //const char* target_begin = index.get_target(target_pos);
     // what's a good structure for tracking if we've filled a forefront?
     // map seems heavyweight
+    // but why not meh
+    std::map<handle_t, dz_forefront_s const*> filled_ffs;
 
     // now walk across the subgraph
     // and, when we've evaluated nodes in correct order, align using previously established forefronts
@@ -188,20 +190,37 @@ alignment_t align_dozeu(
     uint64_t j = 0;
     while (i < target_end) {
         handle_t handle = index.get_handle_at(i);
-        seq_pos_t node_start = index.get_seq_pos(s);
-        uint64_t node_length = index.get_length(h);
+        seq_pos_t node_start = index.get_seq_pos(handle);
+        uint64_t node_length = index.get_length(handle);
         // determine the inbound nodes and if we have filled them, provide them here
         // here make a temporary vector of pointers to forefronts
-        follow_edges(
+        std::vector<dz_forefront_s const*> curr_ffs;
+        index.follow_edges(
             handle, true,
             [&](const handle_t& h) {
                 // need to be able to map into our ff vector
                 // and know if we've filled it
+                auto f = filled_ffs.find(h);
+                if (f != filled_ffs.end()) {
+                    curr_ffs.push_back(f->second);
+                }
             });
+
+        //struct dz_forefront_s const *ff_curr[n_inbound] = { 0 };
+        // make a vector of these
         // otherwise give the root
         // ...
-        ff[j] = dz_extend(dz, q, &ff[0], 1, get_target(i), l, 1);
-        i += node_length - (i - node_start);
+        // XXX TODO this needs to reflect the target end ... not sure if this is correct
+        size_t l = node_length - (i - node_start) - (i + node_length > target_end ? node_length - target_end : 0);
+        ff[j] = dz_extend(dz, // dz object
+                          q,  // query object
+                          (const dz_forefront_s**)&curr_ffs[0], // forefronts inbound
+                          curr_ffs.size(), // count of inbound forefronts
+                          index.get_target(i), // target char*
+                          l,                   // target length
+                          index.get_id(handle)); // id of target node
+        filled_ffs[handle] = ff[j]; // remember our fill
+        i += l; // increment our pointer
         ++j;
     }
 }

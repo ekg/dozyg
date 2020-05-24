@@ -164,7 +164,7 @@ public:
     seq_pos_t get_seq_pos(const handle_t& h) const;
     handle_t get_handle_at(const seq_pos_t& pos) const;
     nid_t get_id(const handle_t& h) const;
-    void follow_edges(const handle_t& h, bool go_left, const std::function<void(const handle_t&)>& func);
+    void follow_edges(const handle_t& h, bool go_left, const std::function<void(const handle_t&)>& func) const;
 
     // target sequences
     const char* get_target(const seq_pos_t& pos) const;

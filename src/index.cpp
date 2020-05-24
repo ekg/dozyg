@@ -379,7 +379,7 @@ nid_t gyeet_index_t::get_id(const handle_t& h) const {
 void gyeet_index_t::follow_edges(
     const handle_t& h,
     bool go_left,
-    const std::function<void(const handle_t&)>& func) {
+    const std::function<void(const handle_t&)>& func) const {
     uint64_t i = handle_rank(h);
     auto& node = node_ref[i];
     auto& next_edge_idx = node_ref[i+1].edge_idx;
