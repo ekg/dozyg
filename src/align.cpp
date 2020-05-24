@@ -125,6 +125,7 @@ void write_alignment_gaf(
 }
 
 alignment_t align_dozeu(
+    struct dz_s* dz,
     const std::string& query_name,
     const uint64_t& query_total_length,
     const char* query,
@@ -137,25 +138,6 @@ alignment_t align_dozeu(
     const uint64_t& query_length,
     const seq_pos_t& target_pos,
     const uint64_t& target_length) {
-
-    /// XXXX todo move this outside so we only call dz_init once per thread
-    /* init score matrix and memory arena */
-	int8_t const M = 1, X = -4, GI = 6, GE = 1;		/* match, mismatch, gap open, and gap extend; g(k) = GI + k + GE for k-length gap */
-	int8_t const xdrop_threshold = 70, full_length_bonus = 10;
-	int8_t const score_matrix[16] = {
-	/*              ref-side  */
-	/*             A  C  G  T */
-	/*        A */ M, X, X, X,
-	/* query- C */ X, M, X, X,
-	/*  side  G */ X, X, M, X,
-	/*        T */ X, X, X, M
-	};
-	struct dz_s *dz = dz_init(
-		score_matrix,
-		GI, GE,
-		xdrop_threshold,
-		full_length_bonus
-	);
 
     const char* query_begin = query + seq_pos::offset(query_pos);
 
@@ -613,6 +595,7 @@ uint64_t edit_distance_estimate(
 }
 
 alignment_t superalign(
+    struct dz_s* dz,
     const std::string& query_name,
     const uint64_t& query_total_length,
     const char* query,
@@ -691,6 +674,7 @@ alignment_t superalign(
 
         alignment_t aln
             = align_dozeu(
+                dz,
                 query_name,
                 query_total_length,
                 query,

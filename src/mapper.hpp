@@ -43,6 +43,7 @@ bool still_working(
     const std::vector<std::atomic<bool>>& working);
 
 std::string map_seq(
+    struct dz_s* dz,
     const std::string& name,
     const std::string& query,
     const gyeet_index_t& index,
@@ -54,6 +55,8 @@ std::string map_seq(
     const bool& write_alignments,
     const bool& write_chains,
     const bool& write_superchains);
+
+dz_s* setup_dozeu(void);
 
 void worker_thread(
     uint64_t tid,

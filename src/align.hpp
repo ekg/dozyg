@@ -78,6 +78,7 @@ alignment_t align_edlib(
     const seq_pos_t& target_length);
 
 alignment_t align_dozeu(
+    struct dz_s* dz,
     const std::string& query_name,
     const uint64_t& query_total_length,
     const char* query,
@@ -117,6 +118,7 @@ void graph_relativize(
 uint64_t edit_distance_estimate(const chain_t& chain, const double& max_mismatch_rate);
 
 alignment_t superalign(
+    struct dz_s* dz,
     const std::string& query_name,
     const uint64_t& query_total_length,
     const char* query,

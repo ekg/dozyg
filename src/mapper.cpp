@@ -97,6 +97,7 @@ bool still_working(
 }
 
 std::string map_seq(
+    struct dz_s* dz,
     const std::string& name,
     const std::string& query,
     const gyeet_index_t& index,
@@ -138,6 +139,7 @@ std::string map_seq(
         for (uint64_t i = 0; i < up_to; ++i) {
             auto& superchain = query_superchains[i];
             alignment_t aln = superalign(
+                dz,
                 name,
                 query.length(),
                 query.c_str(),
@@ -150,6 +152,27 @@ std::string map_seq(
         }
     }
     return ss.str();
+}
+
+dz_s* setup_dozeu(void) {
+    /* init score matrix and memory arena */
+	int8_t const M = 1, X = -4, GI = 6, GE = 1;		/* match, mismatch, gap open, and gap extend; g(k) = GI + k + GE for k-length gap */
+	int8_t const xdrop_threshold = 70, full_length_bonus = 10;
+	int8_t const score_matrix[16] = {
+	/*              ref-side  */
+	/*             A  C  G  T */
+	/*        A */ M, X, X, X,
+	/* query- C */ X, M, X, X,
+	/*  side  G */ X, X, M, X,
+	/*        T */ X, X, X, M
+	};
+    struct dz_s *dz = dz_init(
+		score_matrix,
+		GI, GE,
+		xdrop_threshold,
+		full_length_bonus
+	);
+    return dz;
 }
 
 void worker_thread(
@@ -168,6 +191,8 @@ void worker_thread(
     bool write_chains,
     bool write_superchains) {
 
+    struct dz_s* dz = setup_dozeu();
+
     is_working.store(true);
     while (true) {
         seq_record_t* rec = nullptr;
@@ -177,7 +202,8 @@ void worker_thread(
         } else if (rec != nullptr) {
             std::string* gaf_rec
                 = new std::string(
-                    map_seq(rec->name,
+                    map_seq(dz,
+                            rec->name,
                             rec->seq,
                             index,
                             max_chain_gap,
