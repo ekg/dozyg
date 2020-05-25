@@ -53,16 +53,17 @@ void reader_thread(
     const std::vector<std::string>& files,
     seq_atomic_queue_t& seq_queue,
     std::atomic<bool>& reader_done) {
+    uint64_t i = 0;
     for (auto& file : files) {
         for_each_seq_in_file(
             file,
-            [&seq_queue](
+            [&seq_queue,&i](
                 const std::string& name,
                 const std::string& seq) {
                 seq_record_t* rec = new seq_record_t(name, seq);
-                while (!seq_queue.try_push(rec)) {
-                    std::this_thread::sleep_for(100ns);
-                }
+                //std::cerr << "pushing " << ++i << std::endl;
+                seq_queue.push(rec);
+                //std::cerr << "queue was full " << seq_queue.was_full() << std::endl;
             });
         
     }
@@ -82,7 +83,7 @@ void writer_thread(
             out << *gaf_lines;
             delete gaf_lines;
         } else {
-            std::this_thread::sleep_for(100ns);
+            std::this_thread::sleep_for(1ms);
         }
     }
 }
@@ -166,7 +167,7 @@ dz_s* setup_dozeu(void) {
 	/*  side  G */ X, X, M, X,
 	/*        T */ X, X, X, M
 	};
-    struct dz_s *dz = dz_init(
+    dz_s* dz = dz_init(
 		score_matrix,
 		GI, GE,
 		xdrop_threshold,
@@ -191,7 +192,7 @@ void worker_thread(
     bool write_chains,
     bool write_superchains) {
 
-    struct dz_s* dz = setup_dozeu();
+    dz_s* dz = setup_dozeu();
 
     is_working.store(true);
     while (true) {
@@ -217,9 +218,10 @@ void worker_thread(
             gaf_queue.push(gaf_rec);
             delete rec;
         } else {
-            std::this_thread::sleep_for(100ns);
+            std::this_thread::sleep_for(1ms);
         }
     }
+    dz_destroy(dz);
     is_working.store(false);
 }
 
@@ -236,8 +238,10 @@ void map_reads(
     const bool& write_chains,
     const bool& write_superchains) {
 
-    seq_atomic_queue_t seq_queue;
-    gaf_atomic_queue_t gaf_queue;
+    seq_atomic_queue_t* seq_queue_ptr = new seq_atomic_queue_t;
+    auto& seq_queue = *seq_queue_ptr;
+    gaf_atomic_queue_t* gaf_queue_ptr = new gaf_atomic_queue_t;
+    auto& gaf_queue = *gaf_queue_ptr;
     std::atomic<bool> reader_done;
     reader_done.store(false);
     std::vector<std::atomic<bool>> working(nthreads);
@@ -269,17 +273,16 @@ void map_reads(
     }
 
     reader.join();
-    //std::cerr << "reader done" << std::endl;
     for (auto& worker : workers) {
         worker.join();
     }
-    //std::cerr << "workers done" << std::endl;
     writer.join();
-    //std::cerr << "writer done" << std::endl;
     //while (!reader_done.load() || !still_working(working)) {
 //}
     // watch until we're done reading, done mapping, and done writing
     // then join and finish
+    delete seq_queue_ptr;
+    delete gaf_queue_ptr;
     
 }
 

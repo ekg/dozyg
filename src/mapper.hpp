@@ -43,7 +43,7 @@ bool still_working(
     const std::vector<std::atomic<bool>>& working);
 
 std::string map_seq(
-    struct dz_s* dz,
+    dz_s* dz,
     const std::string& name,
     const std::string& query,
     const gyeet_index_t& index,

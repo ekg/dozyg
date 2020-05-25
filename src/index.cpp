@@ -361,7 +361,7 @@ handle_t gyeet_index_t::get_handle_at(const seq_pos_t& pos) const {
     uint64_t offset = seq_pos::offset(pos);
     // the forward/reverse conversion is somewhat tricky because rank(N) yields the number of set bits in [0..N)
     if (is_rev) {
-        return make_handle(seq_bv_rank(seq_length - offset + 1) - 1, is_rev);
+        return make_handle(seq_bv_rank(seq_length - offset) - 1, is_rev);
     } else {
         return make_handle(seq_bv_rank(offset + 1) - 1, is_rev);
     }

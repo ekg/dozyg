@@ -8,8 +8,8 @@ project(gyeet)
 set(CMAKE_CXX_STANDARD 14)
 
 # Use all standard-compliant optimizations
-set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS} -O3 -mcx16 -msse4.2 -g")
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -O3 -mcx16 -msse4.2 -g")
+set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS} -O3 -mcx16 -msse4.1 -g")
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -O3 -mcx16 -msse4.1 -g")
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   # assumes clang build
@@ -305,7 +305,7 @@ set(gyeet_LIBS
   ${handlegraph_LIB}/libhandlegraph.a
   ${mmap_allocator_LIB}/libmmap_allocator.a
   edlib
-  dl
+#  dl
   atomic
   z)
 

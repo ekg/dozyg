@@ -125,7 +125,7 @@ void write_alignment_gaf(
 }
 
 alignment_t align_dozeu(
-    struct dz_s* dz,
+    dz_s* dz,
     const std::string& query_name,
     const uint64_t& query_total_length,
     const char* query,
@@ -140,26 +140,36 @@ alignment_t align_dozeu(
     const uint64_t& target_length) {
 
     const char* query_begin = query + seq_pos::offset(query_pos);
+    //std::cerr << "query pos " << query_pos << std::endl;
 
-    struct dz_query_s const *q = dz_pack_query_forward(
+    dz_query_s const *q = dz_pack_query_forward(
         dz,
 	    query_begin,
 	    query_length
 	);
 
     uint64_t node_count = 0;
+    //std::cerr << "target_pos " << seq_pos::to_string(target_pos) << std::endl;
     seq_pos_t target_end = target_pos + target_length;
     seq_pos_t i = target_pos;
+    //std::cerr << "target_end " << seq_pos::to_string(target_end) << std::endl;
     while (i < target_end) {
         handle_t handle = index.get_handle_at(i);
+        //std::cerr << "node " << index.get_id(handle) << std::endl;
         seq_pos_t node_start = index.get_seq_pos(handle);
         uint64_t node_length = index.get_length(handle);
-        size_t l = node_length - (i - node_start) - (i + node_length > target_end ? node_length - target_end : 0);
+        //std::cerr << "node length " << node_length << std::endl;
+        //std::cerr << "i = " << seq_pos::to_string(i) << " node_start " << seq_pos::to_string(node_start) << std::endl;
+        //std::cerr << "node end = " << seq_pos::to_string(node_start + node_length) << std::endl;
+        size_t l = node_length - (i - node_start); // - (i + node_length > target_end ? node_length - target_end : 0);
+        //std::cerr << "l is " << l << std::endl;
         i += l;
         ++node_count;
     }
 
-    struct dz_forefront_s const *ff[node_count] = { 0 };
+    //std::cerr << "aligning against node_count = " << node_count << std::endl;
+
+    dz_forefront_s const *ff[node_count] = { 0 };
     //std::cerr << "dz node_count " << node_count << std::endl;
     //const char* target_begin = index.get_target(target_pos);
     // what's a good structure for tracking if we've filled a forefront?
@@ -191,12 +201,11 @@ alignment_t align_dozeu(
                 }
             });
 
-        //struct dz_forefront_s const *ff_curr[n_inbound] = { 0 };
         // make a vector of these
         // otherwise give the root
         // ...
         // XXX TODO this needs to reflect the target end ... not sure if this is correct
-        size_t l = node_length - (i - node_start) - (i + node_length > target_end ? node_length - target_end : 0);
+        size_t l = node_length - (i - node_start); // - (i + node_length > target_end ? node_length - target_end : 0);
         if (curr_ffs.empty()) {
             //std::cerr << index.get_id(handle) << " has no inbound" << std::endl;
             curr_ffs.push_back(*dz_root(dz));
@@ -214,30 +223,29 @@ alignment_t align_dozeu(
     }
 
     /* detect max */
-	struct dz_forefront_s const *max = NULL;
+	dz_forefront_s const *max = NULL;
 	for(size_t i = 0; i < node_count; i++) {
-        //std::cerr << "max be " << ff[i]->max << std::endl;
 		if(max == NULL || ff[i]->max > max->max) { max = ff[i]; }
 	}
 
-    //std::cerr << "uh max be " << max << std::endl;
     alignment_t aln;
-    if (max == 0) {
-        // no traceback possible, no path, no alignment
+    aln.query_begin = seq_pos::offset(query_pos);
+    aln.query_end = seq_pos::offset(query_pos + query_length);
+    if (max->max == 0) {
+        //std::cerr << "no traceback possible, no path, no alignment" << std::endl;
         return aln;
     }
 
 	/* traceback */
-	struct dz_alignment_s const *dz_aln = dz_trace(
+	dz_alignment_s const *dz_aln = dz_trace(
 		dz,
 		max
 	);
 
     //std::cerr << "aln? " << dz_aln->score << std::endl;
-
     //std::cerr << "ref_length(" << dz_aln->ref_length << "), query_length(" << dz_aln->query_length << "), score(" << dz_aln->score << "), path(" << dz_aln->path << ")" << std::endl;
 	for(size_t i = 0; i < dz_aln->span_length; i++) {
-		struct dz_path_span_s const *s = &dz_aln->span[i];
+		dz_path_span_s const *s = &dz_aln->span[i];
         //std::cerr << "node_id(" << s->id << "), subpath_length(" << s[1].offset - s[0].offset << "), subpath(" << std::string((char*)&dz_aln->path[s->offset], s[1].offset - s[0].offset) << ")" << std::endl;
         for (uint64_t j = s->offset; j < s[1].offset; ++j) {
             extend_cigar(aln.cigar, 1, (char)dz_aln->path[j]);
@@ -245,6 +253,8 @@ alignment_t align_dozeu(
         aln.path.push_back(as_handle(s->id));
 	}
     aln.score = dz_aln->score;
+
+    dz_flush(dz);
 
     return aln;
 
@@ -640,11 +650,14 @@ alignment_t superalign(
         uint64_t edit_distance = edit_distance_estimate(*chain, max_mismatch_rate, query_end_extension, target_begin_offset+target_end_offset);
 
         if (target_begin >= target_end
-            || query_begin >= query_end) continue;
+            || query_begin >= query_end) {
+            continue;
+        }
 
         bool use_global = true; //(double)(query_end - query_begin) / (double)(chain->query_end() - chain->query_begin()) < 1.5;
-/*
-        std::cerr << "query gap " << query_gap << std::endl;
+
+        //std::cerr << "query gap " << query_gap << std::endl;
+        /*
         std::cerr << "query end extension " << query_end_extension << std::endl;
         std::cerr << "query begin " << query_begin << std::endl;
         std::cerr << "query end " << query_end << std::endl;
@@ -653,7 +666,7 @@ alignment_t superalign(
         std::cerr << "target end " << seq_pos::to_string(target_end) << std::endl;
         std::cerr << "target end offset " << target_end_offset << std::endl;
         std::cerr << "edit distance " << edit_distance << std::endl;
-*/
+        */
 
         /*
         alignment_t ed_aln
