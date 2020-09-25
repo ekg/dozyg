@@ -31,15 +31,16 @@ But, because of its two-stage chaining process, `dozyg` is able to align to grap
 `dozyg` reads [odgi](https://github.com/vgteam/odgi) graphs, indexes their kmers, and then maps reads from FASTA or FASTQ into a subset of the [GAF](https://github.com/lh3/gfatools/blob/master/doc/rGFA.md#the-graph-alignment-format-gaf) graph alignment format.
 
 ```
-odgi build -g g.gfa -o g.odgi
-dozyg index -i g.odgi -k 15 -e 3 -t 4
-dozyg map -i g.odgi -f reads.fq >aln.gaf
+odgi build -g g.gfa -o - | odgi sort -i - -o g.odgi -p Ygs -t 16 -P
+dozyg index -i g.odgi -k 15 -e 3 -t 16
+dozyg map -t 16 -i g.odgi -f reads.fq >aln.gaf
 ```
 
 Downstream processing of GAF records in enabled by numerous algorithms in [vg](http://github.com/vgteam/vg), including `vg pack` and `vg call`.
 Other methods working on GAF alignments can be applied, such as [gaffy](https://github.com/ekg/gaffy), which can project these into various graph matrix formats.
 
 Future ergonomic improvements will allow the direct indexing of any pangenome graph in [GFAv1](https://github.com/GFA-spec/GFA-spec/blob/master/GFA1.md) format, and indexing only kmers that occur in actual genomes.
+We will record the translation of node names from the input graph to that of the internally sorted graph.
 
 ## scope
 
