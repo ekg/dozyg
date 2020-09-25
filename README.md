@@ -29,6 +29,7 @@ But, because of its two-stage chaining process, `dozyg` is able to align to grap
 ## operation
 
 `dozyg` reads [odgi](https://github.com/vgteam/odgi) graphs, indexes their kmers, and then maps reads from FASTA or FASTQ into a subset of the [GAF](https://github.com/lh3/gfatools/blob/master/doc/rGFA.md#the-graph-alignment-format-gaf) graph alignment format.
+The input graph must be sorted using a process that ensures that collinear chains of paths in the graph are represented contiguously in its id ordering (this is achieved with `odgi sort`).
 
 ```
 odgi build -g g.gfa -o - | odgi sort -i - -o g.odgi -p Ygs -t 16 -P
