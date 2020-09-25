@@ -377,7 +377,7 @@ nid_t dozyg_index_t::get_id(const handle_t& h) const {
     return handle_rank(h) + 1;
 }
 
-void gyeet_index_t::follow_edges(
+void dozyg_index_t::follow_edges(
     const handle_t& h,
     bool go_left,
     const std::function<void(const handle_t&)>& func) const {

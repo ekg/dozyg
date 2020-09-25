@@ -130,7 +130,7 @@ alignment_t align_dozeu(
     const uint64_t& query_total_length,
     const char* query,
     const chain_t& chain,
-    const gyeet_index_t& index,
+    const dozyg_index_t& index,
     const uint64_t& extra_bp,
     const uint64_t& max_edit_distance,
     const bool& global_alignment,
