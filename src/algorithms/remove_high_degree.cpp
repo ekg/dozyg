@@ -1,6 +1,6 @@
 #include "remove_high_degree.hpp"
 
-namespace gyeet {
+namespace dozyg {
 namespace algorithms {
 
 using namespace handlegraph;

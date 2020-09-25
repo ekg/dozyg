@@ -9,9 +9,9 @@
 #include "align.hpp"
 #include "mapper.hpp"
 
-namespace gyeet {
+namespace dozyg {
 
-using namespace gyeet::subcommand;
+using namespace dozyg::subcommand;
 
 int main_map(int argc, char** argv) {
 
@@ -19,7 +19,7 @@ int main_map(int argc, char** argv) {
     for (uint64_t i = 1; i < argc-1; ++i) {
         argv[i] = argv[i+1];
     }
-    std::string prog_name = "gyeet map";
+    std::string prog_name = "dozyg map";
     argv[0] = (char*)prog_name.c_str();
     --argc;
     
@@ -61,12 +61,12 @@ int main_map(int argc, char** argv) {
 
     std::string idx_prefix;
     if (args::get(idx_in_file).empty()) {
-        std::cerr << "[gyeet map] Error: an index basename is required (-i)" << std::endl;
+        std::cerr << "[dozyg map] Error: an index basename is required (-i)" << std::endl;
     } else {
         idx_prefix = args::get(idx_in_file);
     }
 
-    gyeet_index_t index;
+    dozyg_index_t index;
     index.load(idx_prefix);
 
     const uint64_t& kmer_length = index.kmer_length;
@@ -135,7 +135,7 @@ int main_map(int argc, char** argv) {
     return 0;
 }
 
-static Subcommand gyeet_map("map", "map sequences to an index",
+static Subcommand dozyg_map("map", "map sequences to an index",
                             PIPELINE, 3, main_map);
 
 

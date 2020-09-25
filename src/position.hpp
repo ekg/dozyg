@@ -9,7 +9,7 @@
  * Functions for working with Positions and `pos_t`s.
  */
 
-namespace gyeet {
+namespace dozyg {
 
 //using namespace handlegraph;
 

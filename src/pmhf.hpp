@@ -3,7 +3,7 @@
 #include <cstdint> 
 #include "BooPHF.h"
 
-namespace gyeet {
+namespace dozyg {
 
 template <typename T> class HashHasher {
 public:

@@ -10,16 +10,16 @@
 #include "subcommand/subcommand.hpp"
 
 using namespace std;
-using namespace gyeet;
+using namespace dozyg;
 
-void gyeet_help(char** argv) {
-    cerr << "gyeet: ultrafast sequence/graph aligner" << endl
+void dozyg_help(char** argv) {
+    cerr << "dozyg: ultrafast sequence/graph aligner" << endl
          << endl
          << "usage: " << argv[0] << " <command> [options]" << endl
          << endl
-         << gyeet::subcommand::PIPELINE << ":" << endl;
+         << dozyg::subcommand::PIPELINE << ":" << endl;
          
-    gyeet::subcommand::Subcommand::for_each(gyeet::subcommand::PIPELINE, [](const gyeet::subcommand::Subcommand& command) {
+    dozyg::subcommand::Subcommand::for_each(dozyg::subcommand::PIPELINE, [](const dozyg::subcommand::Subcommand& command) {
         // Announce every subcommand we have
         
         // Pad all the names so the descriptions line up
@@ -28,7 +28,7 @@ void gyeet_help(char** argv) {
         cerr << "  -- " << name << command.get_description() << endl;
      });
      
-     cerr << endl << "For more commands, type `gyeet help`." << endl;
+     cerr << endl << "For more commands, type `dozyg help`." << endl;
  }
 
 // We make sure to compile main for the lowest common denominator architecture.
@@ -41,11 +41,11 @@ int main(int argc, char *argv[]) {
     setenv("TCMALLOC_LARGE_ALLOC_REPORT_THRESHOLD", "1000000000000000", 1);
 
     if (argc == 1) {
-        gyeet_help(argv);
+        dozyg_help(argv);
         return 1;
     }
     
-    auto* subcommand = gyeet::subcommand::Subcommand::get(argc, argv);
+    auto* subcommand = dozyg::subcommand::Subcommand::get(argc, argv);
     if (subcommand != nullptr) {
         // We found a matching subcommand, so run it
         return (*subcommand)(argc, argv);
@@ -53,7 +53,7 @@ int main(int argc, char *argv[]) {
         // No subcommand found
         string command = argv[1];
         cerr << "error:[dg] command " << command << " not found" << endl;
-        gyeet_help(argv);
+        dozyg_help(argv);
         return 1;
     }
 

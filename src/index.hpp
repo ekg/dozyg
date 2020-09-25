@@ -17,7 +17,7 @@
 #include "dna.hpp"
 //#include "mmap.hpp"
 
-namespace gyeet {
+namespace dozyg {
 
 using namespace mmap_allocator_namespace;
 
@@ -91,7 +91,7 @@ struct node_ref_t {
     uint64_t count_prev = 0;
 };
 
-class gyeet_index_t {
+class dozyg_index_t {
 public:
     // the kmer size that this graph was built on
     uint64_t kmer_length = 0;
@@ -129,8 +129,8 @@ public:
     bool loaded = false;
 
     // constructor/destructor
-    gyeet_index_t(void);
-    ~gyeet_index_t(void);
+    dozyg_index_t(void);
+    ~dozyg_index_t(void);
 
     // build from an input graph
     void build(const HandleGraph& graph,

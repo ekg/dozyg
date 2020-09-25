@@ -6,9 +6,9 @@
 #include "threads.hpp"
 #include "index.hpp"
 
-namespace gyeet {
+namespace dozyg {
 
-using namespace gyeet::subcommand;
+using namespace dozyg::subcommand;
 
 int main_query(int argc, char** argv) {
 
@@ -16,7 +16,7 @@ int main_query(int argc, char** argv) {
     for (uint64_t i = 1; i < argc-1; ++i) {
         argv[i] = argv[i+1];
     }
-    std::string prog_name = "gyeet query";
+    std::string prog_name = "dozyg query";
     argv[0] = (char*)prog_name.c_str();
     --argc;
     
@@ -65,7 +65,7 @@ int main_query(int argc, char** argv) {
     std::string idx_prefix;
     if (args::get(idx_in_file).empty()) {
         if (infile == "-") {
-            std::cerr << "[gyeet query] Error: reading graph from stdin but no input file specified with -o" << std::endl;
+            std::cerr << "[dozyg query] Error: reading graph from stdin but no input file specified with -o" << std::endl;
             return 4;
         } else {
             idx_prefix = infile;
@@ -74,7 +74,7 @@ int main_query(int argc, char** argv) {
         idx_prefix = args::get(idx_in_file);
     }
 
-    gyeet_index_t index;
+    dozyg_index_t index;
     index.load(idx_prefix);
 
     algorithms::for_each_kmer(
@@ -108,7 +108,7 @@ int main_query(int argc, char** argv) {
     return 0;
 }
 
-static Subcommand gyeet_query("query", "test a gyeet index",
+static Subcommand dozyg_query("query", "test a dozyg index",
                               PIPELINE, 3, main_query);
 
 

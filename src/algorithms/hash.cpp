@@ -1,6 +1,6 @@
 #include "hash.hpp"
 
-namespace gyeet {
+namespace dozyg {
 
 uint32_t djb2_hash32(const char *str, uint64_t len) {
     uint32_t hash = 5381;

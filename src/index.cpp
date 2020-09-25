@@ -1,10 +1,10 @@
 #include "index.hpp"
 
-namespace gyeet {
+namespace dozyg {
 
-gyeet_index_t::gyeet_index_t(void) { }
+dozyg_index_t::dozyg_index_t(void) { }
 
-gyeet_index_t::~gyeet_index_t(void) {
+dozyg_index_t::~dozyg_index_t(void) {
     if (loaded) {
         delete bphf;
         seq_fwd.munmap_file();
@@ -16,7 +16,7 @@ gyeet_index_t::~gyeet_index_t(void) {
     }
 }
 
-void gyeet_index_t::build(const HandleGraph& graph,
+void dozyg_index_t::build(const HandleGraph& graph,
                           const uint64_t& _kmer_length,
                           const uint64_t& max_furcations,
                           const uint64_t& max_degree,
@@ -248,7 +248,7 @@ void gyeet_index_t::build(const HandleGraph& graph,
 
 }
 
-void gyeet_index_t::load(const std::string& in_prefix) {
+void dozyg_index_t::load(const std::string& in_prefix) {
 
     // load our metadata
     std::string metadata_filename = in_prefix + ".mtd";
@@ -296,21 +296,21 @@ void gyeet_index_t::load(const std::string& in_prefix) {
 }
 
 // get a key representation of a sequence kmer
-uint64_t gyeet_index_t::to_key(const char* seq, const size_t& len) const {
+uint64_t dozyg_index_t::to_key(const char* seq, const size_t& len) const {
     return djb2_hash64(seq, len);
 }
 
-uint64_t gyeet_index_t::to_key(const std::string& seq) const {
+uint64_t dozyg_index_t::to_key(const std::string& seq) const {
     return to_key(seq.c_str(), seq.length());
 }
 
 // when sampling kmers, would this key pass our filter?
-bool gyeet_index_t::keep_key(const uint64_t& key) const {
+bool dozyg_index_t::keep_key(const uint64_t& key) const {
     return sampling_mod == 0 || key % sampling_mod == 0;
 }
 
 // iterate over values of a given key, if we would expect it in the index
-void gyeet_index_t::for_values_of(const char* seq, const size_t& len, const std::function<void(const kmer_start_end_t& v)>& lambda) const {
+void dozyg_index_t::for_values_of(const char* seq, const size_t& len, const std::function<void(const kmer_start_end_t& v)>& lambda) const {
     assert(len == kmer_length);
     uint64_t key = to_key(seq, len);
     if (keep_key(key)) {
@@ -326,23 +326,23 @@ void gyeet_index_t::for_values_of(const char* seq, const size_t& len, const std:
 }
 
 // specialization for string input
-void gyeet_index_t::for_values_of(const std::string& seq, const std::function<void(const kmer_start_end_t& v)>& lambda) const {
+void dozyg_index_t::for_values_of(const std::string& seq, const std::function<void(const kmer_start_end_t& v)>& lambda) const {
     for_values_of(seq.c_str(), seq.length(), lambda);
 }
 
 // node length in the graph
-size_t gyeet_index_t::get_length(const handle_t& h) const {
+size_t dozyg_index_t::get_length(const handle_t& h) const {
     uint64_t i = handle_rank(h);
     return node_ref[i+1].seq_idx - node_ref[i].seq_idx;
 }
 
 // if a given handle is reverse (just use the set bit)
-bool gyeet_index_t::is_reverse(const handle_t& h) const {
+bool dozyg_index_t::is_reverse(const handle_t& h) const {
     return handle_is_rev(h);
 }
 
 // returns our sequence position type for the given strand
-seq_pos_t gyeet_index_t::get_seq_pos(const handle_t& h) const {
+seq_pos_t dozyg_index_t::get_seq_pos(const handle_t& h) const {
     if (is_reverse(h)) {
         // flip our handle start onto the reverse strand
         return seq_pos::encode(seq_length
@@ -355,7 +355,7 @@ seq_pos_t gyeet_index_t::get_seq_pos(const handle_t& h) const {
     }
 }
 
-handle_t gyeet_index_t::get_handle_at(const seq_pos_t& pos) const {
+handle_t dozyg_index_t::get_handle_at(const seq_pos_t& pos) const {
     bool is_rev = seq_pos::is_rev(pos);
     uint64_t offset = seq_pos::offset(pos);
     // the forward/reverse conversion is somewhat tricky because rank(N) yields the number of set bits in [0..N)
@@ -366,13 +366,13 @@ handle_t gyeet_index_t::get_handle_at(const seq_pos_t& pos) const {
     }
 }
 
-const char* gyeet_index_t::get_target(const seq_pos_t& pos) const {
+const char* dozyg_index_t::get_target(const seq_pos_t& pos) const {
     return seq_pos::is_rev(pos) ?
         &seq_rev[seq_pos::offset(pos)]
         : &seq_fwd[seq_pos::offset(pos)];
 }
 
-nid_t gyeet_index_t::get_id(const handle_t& h) const {
+nid_t dozyg_index_t::get_id(const handle_t& h) const {
     return handle_rank(h) + 1;
 }
 

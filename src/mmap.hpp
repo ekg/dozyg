@@ -9,7 +9,7 @@
 #include <unistd.h>
 #include <iostream>
 
-namespace gyeet {
+namespace dozyg {
 
 // memory mapped buffer struct
 template<typename T>
@@ -29,12 +29,12 @@ mmap_buffer_t<T> open_mmap_buffer(const char* path) {
     buffer.data = nullptr;
     buffer.fd = open(path, O_RDWR);
     if (buffer.fd == -1) {
-        std::cerr << "[gyeet/mmap.hpp] Error: unable to open file " << path << std::endl;
+        std::cerr << "[dozyg/mmap.hpp] Error: unable to open file " << path << std::endl;
         exit(1);
     }
     struct stat stats;
     if (-1 == fstat(buffer.fd, &stats)) {
-        std::cerr << "[gyeet/mmap.hpp] Error: unable to fstat file " << path << std::endl;
+        std::cerr << "[dozyg/mmap.hpp] Error: unable to fstat file " << path << std::endl;
         exit(1);
     }
     if (!(buffer.data = (T*)mmap(nullptr,
@@ -44,7 +44,7 @@ mmap_buffer_t<T> open_mmap_buffer(const char* path) {
                                  buffer.fd,
                                  0
               ))) {
-        std::cerr << "[gyeet/mmap.hpp] Error: unable to map buffer to file " << path << std::endl;
+        std::cerr << "[dozyg/mmap.hpp] Error: unable to map buffer to file " << path << std::endl;
         exit(1);
     }
     //madvise(buffer, stats.st_size, POSIX_MADV_WILLNEED | POSIX_MADV_SEQUENTIAL);

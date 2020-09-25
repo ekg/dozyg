@@ -5,7 +5,7 @@
 #include "index.hpp"
 #include "chain.hpp"
 
-namespace gyeet {
+namespace dozyg {
 
 typedef std::vector<std::pair<uint32_t, char>> cigar_t;
 typedef std::vector<handle_t> path_t;
@@ -36,34 +36,34 @@ struct alignment_t {
 
 void for_handle_at_anchor_begin_in_chain(
     const chain_t& chain,
-    const gyeet_index_t& index,
+    const dozyg_index_t& index,
     const std::function<void(const handle_t&)>& func);
 
 void write_chain_gaf(
     std::ostream& out,
     const chain_t& chain,
-    const gyeet_index_t& index,
+    const dozyg_index_t& index,
     const std::string& query_name,
     const uint64_t& query_length);
 
 void write_superchain_gaf(
     std::ostream& out,
     const superchain_t& superchain,
-    const gyeet_index_t& index,
+    const dozyg_index_t& index,
     const std::string& query_name,
     const uint64_t& query_length);
 
 void write_alignment_gaf(
     std::ostream& out,
     const alignment_t& aln,
-    const gyeet_index_t& index);
+    const dozyg_index_t& index);
 
 alignment_t align_edlib(
     const std::string& query_name,
     const uint64_t& query_total_length,
     const char* query,
     const chain_t& chain,
-    const gyeet_index_t& index,
+    const dozyg_index_t& index,
     const uint64_t& extra_bp,
     const uint64_t& max_edit_distance,
     const bool& global_alignment,
@@ -90,7 +90,7 @@ void graph_relativize(
     alignment_t& aln,
     seq_pos_t query_pos,
     seq_pos_t target_pos,
-    const gyeet_index_t& index,
+    const dozyg_index_t& index,
     const unsigned char* const alignment,
     const int alignmentLength,
     const bool extended_cigar);
@@ -102,7 +102,7 @@ alignment_t superalign(
     const uint64_t& query_total_length,
     const char* query,
     const superchain_t& superchain,
-    const gyeet_index_t& index,
+    const dozyg_index_t& index,
     const uint64_t& extra_bp,
     const double& max_mismatch_rate,
     const uint64_t& max_gap);

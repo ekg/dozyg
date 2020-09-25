@@ -2,7 +2,7 @@
 
 #include <omp.h>
 
-namespace gyeet {
+namespace dozyg {
 
 int get_thread_count(void);
 

@@ -1,11 +1,11 @@
 #include "chain.hpp"
 
-namespace gyeet {
+namespace dozyg {
 
 
 std::vector<anchor_t>
 anchors_for_query(
-    const gyeet_index_t& index,
+    const dozyg_index_t& index,
     const char* seq,
     const size_t& len) {
     std::vector<anchor_t> anchors;

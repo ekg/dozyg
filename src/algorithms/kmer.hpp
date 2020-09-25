@@ -11,7 +11,7 @@
  * Functions for working with `kmers_t`'s in HandleGraphs.
  */
 
-namespace gyeet {
+namespace dozyg {
 
 using namespace handlegraph;
 
