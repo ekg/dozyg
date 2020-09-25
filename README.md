@@ -55,7 +55,8 @@ This is currently bleeding-edge research software.
 `dozyg` doesn't map.
 It yeets your sequence against the graph and hopes that it sticks.
 It's designed to go fast, and not ask hard questions.
-It will not get stuck in weird universal graph motifs.
+It will not get trapped in weird universal graph motifs.
+It will blast through them like they don't exist.
 Its hierarchical chaining model means that it is not afraid of complex pangenome graphs.
 
 ## author
