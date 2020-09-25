@@ -3,7 +3,7 @@
 cmake_minimum_required(VERSION 3.1)
 
 # Project's name
-project(gyeet)
+project(dozyg)
 # We build using c++14
 set(CMAKE_CXX_STANDARD 14)
 
@@ -235,10 +235,10 @@ set(dozeu_INCLUDE "${SOURCE_DIR}")
 set(CMAKE_BUILD_TYPE Debug)
 
 # set up our target executable and specify its dependencies and includes
-add_library(gyeet_objs OBJECT
+add_library(dozyg_objs OBJECT
   ${CMAKE_SOURCE_DIR}/src/odgi.cpp
   ${CMAKE_SOURCE_DIR}/src/node.cpp # for odgi
-  ${CMAKE_SOURCE_DIR}/src/xg.cpp
+#  ${CMAKE_SOURCE_DIR}/src/xg.cpp
   ${CMAKE_SOURCE_DIR}/src/index.cpp
   ${CMAKE_SOURCE_DIR}/src/chain.cpp
   ${CMAKE_SOURCE_DIR}/src/align.cpp
@@ -255,7 +255,7 @@ add_library(gyeet_objs OBJECT
   ${CMAKE_SOURCE_DIR}/src/algorithms/hash.cpp
   )
 
-set(gyeet_DEPS 
+set(dozyg_DEPS 
     sdsl-lite
     dynamic
     hopscotch_map
@@ -273,9 +273,9 @@ set(gyeet_DEPS
     cgranges
     edlib
     atomicqueue)
-add_dependencies(gyeet_objs ${gyeet_DEPS})
+add_dependencies(dozyg_objs ${dozyg_DEPS})
 
-set(gyeet_INCLUDES
+set(dozyg_INCLUDES
   ${CMAKE_SOURCE_DIR}/src
   ${CMAKE_SOURCE_DIR}/src/algorithms
   ${sdsl-lite_INCLUDE}
@@ -298,7 +298,7 @@ set(gyeet_INCLUDES
   ${atomicqueue_INCLUDE}
   ${dozeu_INCLUDE})
 
-set(gyeet_LIBS
+set(dozyg_LIBS
   ${sdsl-lite_LIB}/libsdsl.a
   ${sdsl-lite-divsufsort_LIB}/libdivsufsort.a
   ${sdsl-lite-divsufsort_LIB}/libdivsufsort64.a
@@ -309,9 +309,9 @@ set(gyeet_LIBS
   atomic
   z)
 
-#set(gyeet_HEADERS
+#set(dozyg_HEADERS
 #  ${CMAKE_SOURCE_DIR}/src/xg.hpp
-#  ${CMAKE_SOURCE_DIR}/src/gyeet.hpp
+#  ${CMAKE_SOURCE_DIR}/src/dozyg.hpp
 #  ${CMAKE_SOURCE_DIR}/src/subcommand/subcommand.hpp
 #  ${CMAKE_SOURCE_DIR}/src/algorithms/remove_high_degree.hpp
 #  ${CMAKE_SOURCE_DIR}/src/algorithms/hash.hpp
@@ -319,25 +319,25 @@ set(gyeet_LIBS
 #  ${CMAKE_SOURCE_DIR}/src/algorithms/kmer.hpp
 #  ${CMAKE_SOURCE_DIR}/src/algorithms/prune.hpp)
 
-target_include_directories(gyeet_objs PUBLIC ${gyeet_INCLUDES})
-set_target_properties(gyeet_objs PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
+target_include_directories(dozyg_objs PUBLIC ${dozyg_INCLUDES})
+set_target_properties(dozyg_objs PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 
-#add_library(libgyeet_static STATIC $<TARGET_OBJECTS:gyeet_objs>)
-#set_target_properties(libgyeet_static PROPERTIES OUTPUT_NAME "gyeet")
-#set_target_properties(libgyeet_static PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
-#add_library(libgyeet_shared SHARED $<TARGET_OBJECTS:gyeet_objs>)
-#set_target_properties(libgyeet_shared PROPERTIES OUTPUT_NAME "gyeet")
-#set_target_properties(libgyeet_shared PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
+#add_library(libdozyg_static STATIC $<TARGET_OBJECTS:dozyg_objs>)
+#set_target_properties(libdozyg_static PROPERTIES OUTPUT_NAME "dozyg")
+#set_target_properties(libdozyg_static PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
+#add_library(libdozyg_shared SHARED $<TARGET_OBJECTS:dozyg_objs>)
+#set_target_properties(libdozyg_shared PROPERTIES OUTPUT_NAME "dozyg")
+#set_target_properties(libdozyg_shared PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 
-#set_target_properties(libgyeet_static PROPERTIES PUBLIC_HEADER "${gyeet_HEADERS}")
-#set_target_properties(libgyeet_shared PROPERTIES PUBLIC_HEADER "${gyeet_HEADERS}")
+#set_target_properties(libdozyg_static PROPERTIES PUBLIC_HEADER "${dozyg_HEADERS}")
+#set_target_properties(libdozyg_shared PROPERTIES PUBLIC_HEADER "${dozyg_HEADERS}")
 
-add_executable(gyeet
-  $<TARGET_OBJECTS:gyeet_objs>
+add_executable(dozyg
+  $<TARGET_OBJECTS:dozyg_objs>
   ${CMAKE_SOURCE_DIR}/src/main.cpp)
-add_dependencies(gyeet gyeet_objs)
-target_link_libraries(gyeet ${gyeet_LIBS})
-set_target_properties(gyeet PROPERTIES OUTPUT_NAME "gyeet")
+add_dependencies(dozyg dozyg_objs)
+target_link_libraries(dozyg ${dozyg_LIBS})
+set_target_properties(dozyg PROPERTIES OUTPUT_NAME "dozyg")
 
 
 #if (NOT EXISTS ${CMAKE_SOURCE_DIR}/deps/pybind11/CMakeLists.txt)
@@ -345,16 +345,16 @@ set_target_properties(gyeet PROPERTIES OUTPUT_NAME "gyeet")
 #endif()
 
 #add_subdirectory(deps/pybind11)
-#pybind11_add_module(gyeet_pybind11 "${CMAKE_SOURCE_DIR}/src/pythonmodule.cpp")
-#add_dependencies(gyeet_pybind11 ${gyeet_DEPS} libgyeet_static)
-#target_include_directories(gyeet_pybind11 PUBLIC ${gyeet_INCLUDES})
-#target_link_libraries(gyeet_pybind11 PRIVATE "${CMAKE_SOURCE_DIR}/lib/libgyeet.a" "${gyeet_LIBS}")
-#set_target_properties(gyeet_pybind11 PROPERTIES OUTPUT_NAME "gyeet")
+#pybind11_add_module(dozyg_pybind11 "${CMAKE_SOURCE_DIR}/src/pythonmodule.cpp")
+#add_dependencies(dozyg_pybind11 ${dozyg_DEPS} libdozyg_static)
+#target_include_directories(dozyg_pybind11 PUBLIC ${dozyg_INCLUDES})
+#target_link_libraries(dozyg_pybind11 PRIVATE "${CMAKE_SOURCE_DIR}/lib/libdozyg.a" "${dozyg_LIBS}")
+#set_target_properties(dozyg_pybind11 PROPERTIES OUTPUT_NAME "dozyg")
 
-install(TARGETS gyeet DESTINATION bin)
-#install(TARGETS libgyeet_static ARCHIVE DESTINATION lib LIBRARY DESTINATION lib PUBLIC_HEADER DESTINATION include/gyeet)
-#install(TARGETS libgyeet_shared ARCHIVE DESTINATION lib LIBRARY DESTINATION lib PUBLIC_HEADER DESTINATION include/gyeet)
-#install(TARGETS gyeet_pybind11 LIBRARY DESTINATION lib)
+install(TARGETS dozyg DESTINATION bin)
+#install(TARGETS libdozyg_static ARCHIVE DESTINATION lib LIBRARY DESTINATION lib PUBLIC_HEADER DESTINATION include/dozyg)
+#install(TARGETS libdozyg_shared ARCHIVE DESTINATION lib LIBRARY DESTINATION lib PUBLIC_HEADER DESTINATION include/dozyg)
+#install(TARGETS dozyg_pybind11 LIBRARY DESTINATION lib)
 
 if (APPLE)
 elseif (TRUE)

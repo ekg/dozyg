@@ -44,7 +44,7 @@
 #include <string>
 #include <iostream>
 
-namespace gyeet {
+namespace dozyg {
 namespace subcommand {
 
 /**

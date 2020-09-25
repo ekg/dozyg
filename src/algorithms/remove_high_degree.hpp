@@ -11,7 +11,7 @@
 #include <vector>
 #include <iostream>
 
-namespace gyeet {
+namespace dozyg {
 namespace algorithms {
 
 using namespace handlegraph;

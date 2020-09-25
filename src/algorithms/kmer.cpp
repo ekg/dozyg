@@ -1,6 +1,6 @@
 #include "kmer.hpp"
 
-namespace gyeet {
+namespace dozyg {
 
 namespace algorithms {
 

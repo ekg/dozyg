@@ -1,6 +1,6 @@
 #include "prune.hpp"
 
-namespace gyeet {
+namespace dozyg {
 
 namespace algorithms {
 

@@ -7,7 +7,7 @@
 #include <vector>
 #include <limits>
 
-namespace gyeet {
+namespace dozyg {
 namespace subcommand {
 
 std::ostream& operator<<(std::ostream& out, const CommandCategory& category) {

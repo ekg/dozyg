@@ -8,7 +8,7 @@
 #include <IITree.h> // cgranges
 #include "index.hpp"
 
-namespace gyeet {
+namespace dozyg {
 
 struct anchor_t {
     seq_pos_t query_begin = 0;
@@ -27,7 +27,7 @@ struct anchor_t {
         , target_end(te) { }
 };
 
-std::vector<anchor_t> anchors_for_query(const gyeet_index_t& index,
+std::vector<anchor_t> anchors_for_query(const dozyg_index_t& index,
                                         const char* seq,
                                         const size_t& len);
 

@@ -1,6 +1,6 @@
 #include "utility.hpp"
 
-namespace gyeet {
+namespace dozyg {
 
 void allocate_file(const std::string& fname, size_t size) {
     FILE* f = fopen(fname.c_str(), "w");

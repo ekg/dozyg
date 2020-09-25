@@ -6,7 +6,7 @@
 #include <deque>
 #include "flat_hash_map.hpp"
 
-namespace gyeet {
+namespace dozyg {
 namespace algorithms {
     
 using namespace handlegraph;

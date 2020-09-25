@@ -1,6 +1,6 @@
 #include "dfs.hpp"
 
-namespace gyeet {
+namespace dozyg {
 namespace algorithms {
 
 using namespace handlegraph;

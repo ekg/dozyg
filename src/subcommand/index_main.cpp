@@ -6,9 +6,9 @@
 #include "threads.hpp"
 #include "index.hpp"
 
-namespace gyeet {
+namespace dozyg {
 
-using namespace gyeet::subcommand;
+using namespace dozyg::subcommand;
 
 int main_index(int argc, char** argv) {
 
@@ -16,7 +16,7 @@ int main_index(int argc, char** argv) {
     for (uint64_t i = 1; i < argc-1; ++i) {
         argv[i] = argv[i+1];
     }
-    std::string prog_name = "gyeet index";
+    std::string prog_name = "dozyg index";
     argv[0] = (char*)prog_name.c_str();
     --argc;
     
@@ -68,7 +68,7 @@ int main_index(int argc, char** argv) {
     std::string idx_prefix;
     if (args::get(idx_out_file).empty()) {
         if (infile == "-") {
-            std::cerr << "[gyeet index] Error: reading graph from stdin but no output file specified with -o" << std::endl;
+            std::cerr << "[dozyg index] Error: reading graph from stdin but no output file specified with -o" << std::endl;
             return 4;
         } else {
             idx_prefix = infile;
@@ -79,7 +79,7 @@ int main_index(int argc, char** argv) {
 
     double sampling_rate = args::get(sampling_r) ? args::get(sampling_r) : 1.0;
 
-    gyeet_index_t index;
+    dozyg_index_t index;
     index.build(graph,
                 args::get(kmer_length),
                 args::get(max_furcations),
@@ -90,7 +90,7 @@ int main_index(int argc, char** argv) {
     return 0;
 }
 
-static Subcommand gyeet_index("index", "process and dump the kmers of the graph",
+static Subcommand dozyg_index("index", "process and dump the kmers of the graph",
                               PIPELINE, 3, main_index);
 
 

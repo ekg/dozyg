@@ -1,6 +1,6 @@
 #include "mapper.hpp"
 
-namespace gyeet {
+namespace dozyg {
 
 using namespace std::chrono_literals;
 
@@ -101,7 +101,7 @@ std::string map_seq(
     struct dz_s* dz,
     const std::string& name,
     const std::string& query,
-    const gyeet_index_t& index,
+    const dozyg_index_t& index,
     const uint64_t& max_chain_gap,
     const double& mismatch_rate,
     const uint64_t& chain_min_n_anchors,
@@ -182,7 +182,7 @@ void worker_thread(
     seq_atomic_queue_t& seq_queue,
     gaf_atomic_queue_t& gaf_queue,
     const std::atomic<bool>& reader_done,
-    const gyeet_index_t& index,
+    const dozyg_index_t& index,
     uint64_t max_chain_gap,
     double mismatch_rate,
     uint64_t chain_min_n_anchors,
@@ -227,7 +227,7 @@ void worker_thread(
 
 void map_reads(
     const std::vector<std::string>& input_files,
-    const gyeet_index_t& index,
+    const dozyg_index_t& index,
     const uint64_t& max_chain_gap,
     const double& mismatch_rate,
     const uint64_t& chain_min_n_anchors,
