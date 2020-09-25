@@ -51,7 +51,7 @@ class string_hash_map : public ska::flat_hash_map<K, V, ska::power_of_two_std_ha
 template<typename K>
 class hash_set : public ska::flat_hash_set<K, ska::power_of_two_std_hash<K> > { };
 
-class graph_t : public MutablePathDeletableHandleGraph, public SerializableHandleGraph {
+class graph_t : public MutablePathDeletableHandleGraph, public SerializableHandleGraph, public RankedHandleGraph {
 
 public:
 
@@ -113,10 +113,9 @@ public:
     /// Set a minimum id to increment the id space by, used as a hint during construction.
     /// May have no effect on a backing implementation.
     void set_id_increment(const nid_t& min_id);
-    
-    /// Get a handle from a Visit Protobuf object.
-    /// Must be using'd to avoid shadowing.
-    //handle_t get_handle(const Visit& visit) const;
+
+    /// Increment node ids, using the builtin id increment, assumes we're increasing by a positive value
+    void increment_node_ids(nid_t increment);
     
     ////////////////////////////////////////////////////////////////////////////
     // Additional optional interface with a default implementation
@@ -138,6 +137,26 @@ public:
     /// Such a pair can be viewed from either inward end handle and produce the
     /// outward handle you would arrive at.
     handle_t traverse_edge_handle(const edge_t& edge, const handle_t& left) const;
+
+    ////////////////////////////////////////////////////////////////////////////
+    // Rank handle interface
+    ////////////////////////////////////////////////////////////////////////////
+    /// Return the rank of a node (ranks start at 1 and are dense).
+    size_t id_to_rank(const nid_t& node_id) const;
+
+    /// Return the node with a given rank.
+    nid_t rank_to_id(const size_t& rank) const;
+
+    // If you define node ID ranks you get a default implementation of handle ranks.
+
+    /// Return the rank of a handle (ranks start at 1 and are dense, and each
+    /// orientation has its own rank). Handle ranks may not have anything to do
+    /// with node ranks.
+    size_t handle_to_rank(const handle_t& handle) const;
+
+    /// Return the handle with a given rank.
+    handle_t rank_to_handle(const size_t& rank) const;
+
     
     ////////////////////////////////////////////////////////////////////////////
     // Path handle interface
@@ -437,9 +456,9 @@ private:
     }
     
     struct path_metadata_t {
-        uint64_t length;
-        step_handle_t first;
-        step_handle_t last;
+        uint64_t length = 0;
+        step_handle_t first = {0, 0};
+        step_handle_t last = {0, 0};
         std::string name;
         bool is_circular = false;
     };
@@ -496,7 +515,7 @@ private:
 
 };
 
-const static uint64_t path_begin_marker = 0;
-const static uint64_t path_end_marker = 1;
+const static uint64_t path_begin_marker = 1;
+const static uint64_t path_end_marker = 2;
 
 } // end dankness
