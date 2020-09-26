@@ -148,6 +148,8 @@ alignment_t align_dozeu(
 	    query_length
 	);
 
+    dz_alignment_init_s aln_init = dz_align_init(dz, max_edit_distance);
+
     uint64_t node_count = 0;
     //std::cerr << "target_pos " << seq_pos::to_string(target_pos) << std::endl;
     seq_pos_t target_end = target_pos + target_length;
@@ -208,7 +210,7 @@ alignment_t align_dozeu(
         size_t l = node_length - (i - node_start); // - (i + node_length > target_end ? node_length - target_end : 0);
         if (curr_ffs.empty()) {
             //std::cerr << index.get_id(handle) << " has no inbound" << std::endl;
-            curr_ffs.push_back(*dz_root(dz));
+            curr_ffs.push_back(aln_init.root);
         }
         ff[j] = dz_extend(dz, // dz object
                           q,  // query object
@@ -216,7 +218,8 @@ alignment_t align_dozeu(
                           curr_ffs.size(), // count of inbound forefronts
                           index.get_target(i), // target char*
                           l,                   // target length
-                          as_integer(handle)); // handle of target node
+                          as_integer(handle),  // handle of target node
+                          aln_init.xt);
         filled_ffs[handle] = ff[j]; // remember our fill
         i += l; // increment our pointer
         ++j;

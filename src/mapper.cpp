@@ -169,8 +169,7 @@ dz_s* setup_dozeu(void) {
 	};
     dz_s* dz = dz_init(
 		score_matrix,
-		GI, GE,
-		xdrop_threshold,
+		GI-GE, GE,
 		full_length_bonus
 	);
     return dz;
