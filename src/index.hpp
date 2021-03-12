@@ -36,6 +36,10 @@ inline handle_t make_handle(const uint64_t& rank, const bool& is_rev) {
     return number_bool_packing::pack(rank, is_rev);
 }
 
+inline handle_t flip_handle(const handle_t& handle) {
+    return number_bool_packing::pack(handle_rank(handle), !handle_is_rev(handle));
+}
+
 // hard coded ID/handle mapping
 inline nid_t to_id(const handle_t& handle) {
     return handle_rank(handle) + 1;
@@ -160,6 +164,7 @@ public:
     seq_pos_t get_seq_pos(const handle_t& h) const;
     handle_t get_handle_at(const seq_pos_t& pos) const;
     nid_t get_id(const handle_t& h) const;
+    void follow_edges(const handle_t& h, bool go_left, const std::function<void(const handle_t&)>& func) const;
 
     // target sequences
     const char* get_target(const seq_pos_t& pos) const;

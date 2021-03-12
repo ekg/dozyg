@@ -51,4 +51,4 @@
 	url = https://github.com/max0x7ba/atomic_queue.git
 [submodule "deps/dozeu"]
 	path = deps/dozeu
-	url = https://github.com/ocxtal/dozeu.git
+	url = https://github.com/vgteam/dozeu.git

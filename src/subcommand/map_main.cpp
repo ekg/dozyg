@@ -118,8 +118,10 @@ int main_map(int argc, char** argv) {
                                              mismatch_rate,
                                              chain_overlap_max);
         std::string query_name = "unknown";
+        dz_s* dz = setup_dozeu();
         for (auto& superchain : query_superchains) {
             alignment_t aln = superalign(
+                dz,
                 query_name,
                 query.length(),
                 query.c_str(),

@@ -56,14 +56,14 @@ void dozyg_index_t::build(const HandleGraph& graph,
     std::string node_ref_filename = out_prefix + ".gyn";
     std::ofstream node_ref_f(node_ref_filename.c_str(), std::ios::binary | std::ios::trunc);
     uint64_t seq_idx = 0;
-    uint64_t ref_idx = 0;
+    //uint64_t ref_idx = 0;
     graph.for_each_handle(
         [&](const handle_t& h) {
             seq_bv[seq_idx] = 1;
             const std::string seq = graph.get_sequence(h);
             seq_fwd_f << seq;
             seq_rev_f << seq;
-            node_ref_t ref = { seq_idx, ref_idx++, 0 };
+            node_ref_t ref = { seq_idx, n_edges, 0 };
             graph.follow_edges(
                 h, true,
                 [&](const handle_t& p) {
@@ -78,11 +78,12 @@ void dozyg_index_t::build(const HandleGraph& graph,
                     edge_f.write(reinterpret_cast<char const*>(&n), sizeof(n));
                     ++n_edges;
                 });
+            //ref_idx = n_edges;
             seq_idx += seq.length();
         });
     {
         // write a marker reference, to simplify counting of edges
-        node_ref_t ref = { seq_idx, ref_idx, 0 };
+        node_ref_t ref = { seq_idx, n_edges, 0 };
         node_ref_f.write(reinterpret_cast<char const*>(&ref), sizeof(ref));
     }
     assert(seq_idx == seq_length);
@@ -360,7 +361,7 @@ handle_t dozyg_index_t::get_handle_at(const seq_pos_t& pos) const {
     uint64_t offset = seq_pos::offset(pos);
     // the forward/reverse conversion is somewhat tricky because rank(N) yields the number of set bits in [0..N)
     if (is_rev) {
-        return make_handle(seq_bv_rank(seq_length - offset + 1) - 1, is_rev);
+        return make_handle(seq_bv_rank(seq_length - offset) - 1, is_rev);
     } else {
         return make_handle(seq_bv_rank(offset + 1) - 1, is_rev);
     }
@@ -374,6 +375,36 @@ const char* dozyg_index_t::get_target(const seq_pos_t& pos) const {
 
 nid_t dozyg_index_t::get_id(const handle_t& h) const {
     return handle_rank(h) + 1;
+}
+
+void dozyg_index_t::follow_edges(
+    const handle_t& h,
+    bool go_left,
+    const std::function<void(const handle_t&)>& func) const {
+    uint64_t i = handle_rank(h);
+    auto& node = node_ref[i];
+    auto& next_edge_idx = node_ref[i+1].edge_idx;
+    if (!handle_is_rev(h)) {
+        if (go_left) {
+            for (uint64_t j = node.edge_idx; j < node.edge_idx + node.count_prev; ++j) {
+                func(edges[j]);
+            }
+        } else {
+            for (uint64_t j = node.edge_idx + node.count_prev; j < next_edge_idx; ++j) {
+                func(edges[j]);
+            }
+        }
+    } else {
+        if (!go_left) {
+            for (uint64_t j = node.edge_idx; j < node.edge_idx + node.count_prev; ++j) {
+                func(flip_handle(edges[j]));
+            }
+        } else {
+            for (uint64_t j = node.edge_idx + node.count_prev; j < next_edge_idx; ++j) {
+                func(flip_handle(edges[j]));
+            }
+        }
+    }
 }
 
 }

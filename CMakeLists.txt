@@ -8,8 +8,8 @@ project(dozyg)
 set(CMAKE_CXX_STANDARD 14)
 
 # Use all standard-compliant optimizations
-set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS} -O3 -mcx16 -g")
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -O3 -mcx16 -g")
+set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS} -O3 -mcx16 -msse4.1 -g")
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -O3 -mcx16 -msse4.1 -g")
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   # assumes clang build
@@ -221,6 +221,16 @@ ExternalProject_Add(atomicqueue
 ExternalProject_Get_property(atomicqueue SOURCE_DIR)
 set(atomicqueue_INCLUDE "${SOURCE_DIR}")
 
+# dozeu
+ExternalProject_Add(dozeu
+  SOURCE_DIR "${CMAKE_SOURCE_DIR}/deps/dozeu"
+  UPDATE_COMMAND ""
+  INSTALL_COMMAND ""
+  BUILD_COMMAND ""
+  CONFIGURE_COMMAND "")
+ExternalProject_Get_property(dozeu SOURCE_DIR)
+set(dozeu_INCLUDE "${SOURCE_DIR}")
+
 #set(CMAKE_BUILD_TYPE Release)
 set(CMAKE_BUILD_TYPE Debug)
 
@@ -285,7 +295,8 @@ set(dozyg_INCLUDES
   ${ips4o_INCLUDE}
   ${cgranges_INCLUDE}
   ${edlib_INCLUDE}
-  ${atomicqueue_INCLUDE})
+  ${atomicqueue_INCLUDE}
+  ${dozeu_INCLUDE})
 
 set(dozyg_LIBS
   ${sdsl-lite_LIB}/libsdsl.a
@@ -294,7 +305,7 @@ set(dozyg_LIBS
   ${handlegraph_LIB}/libhandlegraph.a
   ${mmap_allocator_LIB}/libmmap_allocator.a
   edlib
-  dl
+#  dl
   atomic
   z)
 

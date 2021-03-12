@@ -2,8 +2,13 @@
 
 #include <iostream>
 #include "edlib.h"
+
 #include "index.hpp"
 #include "chain.hpp"
+
+#define DZ_FULL_LENGTH_BONUS						/* use full-length bonus feature */
+#define DZ_CIGAR_OP				0x44493d58			/* 'D', 'I', '=', 'X'; the default is 0x04030201 */
+#include "dozeu.h"
 
 namespace dozyg {
 
@@ -72,6 +77,21 @@ alignment_t align_edlib(
     const seq_pos_t& target_pos,
     const seq_pos_t& target_length);
 
+alignment_t align_dozeu(
+    dz_s* dz,
+    const std::string& query_name,
+    const uint64_t& query_total_length,
+    const char* query,
+    const chain_t& chain,
+    const dozyg_index_t& index,
+    const uint64_t& extra_bp,
+    const uint64_t& max_edit_distance,
+    const bool& global_alignment,
+    const seq_pos_t& query_pos,
+    const uint64_t& query_length,
+    const seq_pos_t& target_pos,
+    const uint64_t& target_length);
+
 bool has_matches(const cigar_t& cigar);
 uint64_t insertion_length(const cigar_t& cigar);
 int64_t score_cigar(
@@ -98,6 +118,7 @@ void graph_relativize(
 uint64_t edit_distance_estimate(const chain_t& chain, const double& max_mismatch_rate);
 
 alignment_t superalign(
+    dz_s* dz,
     const std::string& query_name,
     const uint64_t& query_total_length,
     const char* query,
